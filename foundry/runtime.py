@@ -138,12 +138,14 @@ def _parse_rows(rows):
 
 def prepare(rows, period, source_asset, program=None, *, snapshot_id=None,
             report_type_id="quarterly-revenue", revision=1, parent_id=None,
-            created_at=None, source_snapshot_digest=None, image_asset=None) -> Snapshot:
+            created_at=None, source_snapshot_digest=None, image_asset=None, image_metadata=None) -> Snapshot:
     """Compute one report from already bound CSV rows and explicit source metadata."""
     period = Period.model_validate(period)
     source_asset = SourceAsset.model_validate(source_asset)
     program = Program.model_validate(program) if program is not None else default_program()
     image_asset = SourceAsset.model_validate(image_asset) if image_asset is not None else None
+    if image_metadata and image_asset is None:
+        _fail('REFERENCE_INVALID', 'A report image requires its original bound source asset.')
     parsed = _parse_rows(rows)
     windows = {"current": period, "comparison": period.comparison}
     included = {name: [r for r in parsed if r["status"] == "posted" and window.start <= r["date"] < window.end_exclusive]
@@ -241,12 +243,22 @@ def prepare(rows, period, source_asset, program=None, *, snapshot_id=None,
          "row_dimensions": ["region"], "column_dimensions": ["period"], "measures": [{"column_id": "revenue", "aggregation": "sum"}], "native_required_in": ["grid"]},
     ]
     assets = [source_asset.model_dump()]
+    image_id = None
     if image_asset:
         if image_asset.id == source_asset.id:
             _fail("REFERENCE_INVALID", "The image and transaction source must have distinct asset IDs.")
         assets.append(image_asset.model_dump())
-        nodes.append({"id": "report_mark", "kind": "image", "title": "Report identity", "asset_id": image_asset.id,
-                      "alt_text": "Report Foundry brand mark", "width_px": 160, "height_px": 160, "decorative": True})
+        image_id = 'report_image' if image_metadata else 'report_mark'
+        if image_metadata:
+            from .contracts import Image
+            bound_image = Image.model_validate({'id': image_id, 'kind': 'image', 'title': 'Report image',
+                                                **image_metadata, 'asset_id': image_asset.id})
+            nodes.append(bound_image.model_dump())
+        else:
+            # Legacy native-contract fixture: valid as a reference, blocked by
+            # exporters until a frozen render derivative has been supplied.
+            nodes.append({"id": image_id, "kind": "image", "title": "Report identity", "asset_id": image_asset.id,
+                          "alt_text": "Report Foundry brand mark", "width_px": 160, "height_px": 160, "decorative": True})
     leaf_ids = [node["id"] for node in nodes]
     nodes.insert(0, {"id": "root", "kind": "section", "title": "Quarterly revenue", "children": leaf_ids})
     views = []
@@ -254,20 +266,28 @@ def prepare(rows, period, source_asset, program=None, *, snapshot_id=None,
         "flow": {"page_size": "A4", "margin_mm": 18, "font": "Calibri", "body_pt": 10, "paragraph_indent_pt": 18,
                  "paragraph_space_after_pt": 7, "heading_indent_pt": 0, "table_overflow": "repeat_headers", "pivot_representation": "static_allowed"},
         "grid": {"sheets": [{"name": "Overview", "node_ids": ["summary", "commentary", "regional_table"]},
-                              {"name": "Analysis", "node_ids": ["regional_pivot", "regional_chart"] + (["report_mark"] if image_asset else [])}],
+                              {"name": "Analysis", "node_ids": ["regional_pivot", "regional_chart"]}]
+                             + ([{'name': 'Images', 'node_ids': [image_id]}] if image_id else []),
                  "placement": "after_previous_region", "pivot_representation": "native_required", "pivot_source_scope": "approved_aggregates_only"},
         "canvas": {"aspect_ratio": "16:9", "overflow": "block", "slides": [
-            {"title": "Quarter in review", "node_ids": ["summary", "commentary", "regional_table"] + (["report_mark"] if image_asset else [])},
-            {"title": "Regional performance", "node_ids": ["regional_chart", "regional_pivot"]}], "pivot_representation": "static_allowed"},
+            {"title": "Quarter in review", "node_ids": ["summary", "commentary", "regional_table"]},
+            {"title": "Regional performance", "node_ids": ["regional_chart", "regional_pivot"]}]
+            + ([{'title': 'Report image', 'node_ids': [image_id]}] if image_id else []), "pivot_representation": "static_allowed"},
     }
     for vid, family, title in (("document", "flow", "Document"), ("workbook", "grid", "Workbook"), ("presentation", "canvas", "Presentation")):
         views.append({"id": vid, "family": family, "title": title, "node_ids": leaf_ids,
                       "coverage": {"scope": "complete", "required_node_ids": leaf_ids, "omitted_node_ids": []}, "recipe": recipes[family]})
     findings = []
+    if image_metadata and not image_metadata.get('decorative', False):
+        findings.append(_finding('IMAGE_REVIEW_REQUIRED', 'Review the supplied image and its description. Image content is not used to compute report facts.',
+                                 severity='review', component=image_id, repair='human_review',
+                                 evidence=[f'asset:{image_asset.id}', f'sha256:{image_asset.digest}']))
     if growth is None:
         findings.append(_finding("UNDEFINED_COMPARISON", "Relative growth is undefined because comparison revenue is zero; the absolute movement remains valid.",
                                  severity="warn", component="summary", repair="none"))
     source_payload = [{"id": a["id"], "digest": a["digest"]} for a in assets]
+    if image_metadata:
+        source_payload = {'assets': source_payload, 'image': image_metadata}
     return Snapshot.model_validate({
         "schema_version": "1.0", "id": snapshot_id or f"snapshot_{uuid4().hex}", "revision": revision, "parent_id": parent_id,
         "title": f"Quarterly revenue · {period.label}", "report_type_id": report_type_id, "program": program.model_dump(),
@@ -291,7 +311,8 @@ def prepare(rows, period, source_asset, program=None, *, snapshot_id=None,
                      "input_rows": len(parsed), "current_rows": len(included["current"]), "comparison_rows": len(included["comparison"]),
                      "excluded_rows": len(parsed) - len({r["record_index"] for records in included.values() for r in records}),
                      "composition": "Deterministic fact-bound prose; no language model or semantic truth certification."},
-        "status": "accepted", "created_at": created_at or datetime.now(timezone.utc),
+        "status": "review_required" if any(f.severity == 'review' for f in findings) else "accepted",
+        "created_at": created_at or datetime.now(timezone.utc),
     })
 
 

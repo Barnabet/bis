@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from .contracts import Period
+from .contracts import Period, ImageBinding
 from .storage import Store, canonical
 from .service import Service
 from .errors import DomainError
@@ -43,6 +43,7 @@ class Run(Input):
     asset_id: str
     period: Period
     idempotency_key: str = Field(min_length=1, max_length=200)
+    image: ImageBinding | None = None
 
 class Export(Input):
     snapshot_id: str
@@ -137,6 +138,10 @@ def create_app(data_dir=None, start_worker=True):
         data = store.read_blob(a['digest'])
         return download(data, a['filename'], a['media_type'])
 
+    @app.get('/api/assets/{id}/preview')
+    def image_preview(id: str):
+        return Response(service.image_preview(id), media_type='image/png')
+
     @app.post('/api/report-types/{id}/examples', status_code=201)
     def example(id: str, body: Example):
         return service.add_example(id, body.report_asset_id, body.source_asset_ids, body.period.model_dump(mode='json'), body.corpus_role)
@@ -173,7 +178,8 @@ def create_app(data_dir=None, start_worker=True):
 
     @app.post('/api/report-runs', status_code=202)
     def run(body: Run):
-        job = service.request_run(body.report_type_id, body.asset_id, body.period.model_dump(mode='json'), body.idempotency_key)
+        job = service.request_run(body.report_type_id, body.asset_id, body.period.model_dump(mode='json'), body.idempotency_key,
+                                  image=body.image.model_dump(mode='json') if body.image else None)
         worker.wake.set()
         return job
 
@@ -191,6 +197,10 @@ def create_app(data_dir=None, start_worker=True):
         r = store.get('snapshot', id)
         validate_stored_snapshot(r)
         return r
+
+    @app.get('/api/report-snapshots/{id}/images/{node_id}')
+    def snapshot_image(id: str, node_id: str):
+        return Response(service.snapshot_image(id, node_id), media_type='image/png')
 
     @app.post('/api/report-snapshots/{id}/revisions', status_code=201)
     def revise(id: str, body: Revision):

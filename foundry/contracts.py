@@ -212,10 +212,37 @@ class Chart(NodeBase):
 class Image(NodeBase):
     kind: Literal["image"] = "image"
     asset_id: Identifier
-    alt_text: str = Field(min_length=1)
-    width_px: int = Field(gt=0)
-    height_px: int = Field(gt=0)
+    alt_text: str = Field(max_length=500)
+    width_px: int = Field(gt=0, le=8192)
+    height_px: int = Field(gt=0, le=8192)
     decorative: bool = False
+    render_digest: Digest | None = None
+    media_type: Literal['image/png'] = 'image/png'
+
+    @model_validator(mode='after')
+    def image_identity(self):
+        if not self.decorative and not self.alt_text.strip():
+            raise ValueError('A non-decorative image requires descriptive alt text')
+        if self.width_px * self.height_px > 16_000_000:
+            raise ValueError('Image exceeds the supported pixel limit')
+        return self
+
+
+class ImageBinding(Contract):
+    asset_id: Identifier
+    alt_text: str = Field(default='', max_length=500)
+    decorative: bool = False
+
+    @field_validator('alt_text')
+    @classmethod
+    def trim_alt(cls, value):
+        return value.strip()
+
+    @model_validator(mode='after')
+    def accessible_image(self):
+        if not self.decorative and not self.alt_text:
+            raise ValueError('Describe the image or explicitly mark it decorative')
+        return self
 
 
 Node = Annotated[Section | RichText | Table | Pivot | Chart | Image, Field(discriminator="kind")]

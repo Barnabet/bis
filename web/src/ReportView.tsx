@@ -13,6 +13,8 @@ import {
   Fingerprint,
   GitBranch,
   Info,
+  Image as ImageIcon,
+  ImageOff,
   Layers3,
   Link2,
   LockKeyhole,
@@ -23,6 +25,8 @@ import {
 } from "lucide-react";
 import type { Dataset, Fact, ReportNode, Snapshot } from "./types";
 import { getNodes } from "./types";
+import { ImagePreview } from "./ImagePreview";
+import { nodesForView, viewGroups } from "./viewLayouts";
 import {
   Badge,
   IconButton,
@@ -37,6 +41,7 @@ type Shared = {
   snapshot: Snapshot;
   onFact: (id: string) => void;
   selectedFact: string | null;
+  onSource: (id: string) => void;
 };
 export function RichText({
   node,
@@ -460,12 +465,11 @@ export function ReportDocument(
           );
         if (node.kind === "image")
           return (
-            <figure className="report-image" key={node.id}>
-              <img
-                src={`/api/assets/${node.asset_id}/download`}
-                alt={node.decorative ? "" : (node.alt_text ?? node.title)}
-              />
-            </figure>
+            <SnapshotImage
+              {...props}
+              node={node}
+              key={`${snapshot.id}:${node.id}`}
+            />
           );
         return null;
       })}
@@ -481,200 +485,326 @@ export function ReportDocument(
     </article>
   );
 }
-export function WorkbookView(props: Shared) {
-  const [sheet, setSheet] = useState("Overview");
-  const nodes = getNodes(props.snapshot);
+function SnapshotImage({
+  snapshot,
+  node,
+  onSource,
+}: Shared & { node: ReportNode }) {
+  const source = snapshot.source_assets.find(
+    (asset) => asset.id === node.asset_id,
+  );
+  return (
+    <figure className="snapshot-image">
+      {node.render_digest ? (
+        <ImagePreview
+          src={`/api/report-snapshots/${encodeURIComponent(snapshot.id)}/images/${encodeURIComponent(node.id)}`}
+          alt={node.decorative ? "" : (node.alt_text ?? node.title)}
+          className="snapshot-image-preview"
+          onInspect={node.asset_id ? () => onSource(node.asset_id!) : undefined}
+          inspectLabel={`Inspect source for ${node.title}`}
+        />
+      ) : (
+        <div className="legacy-image-unavailable" role="status">
+          <ImageOff size={22} />
+          <p>
+            This legacy snapshot has no preserved image bytes. Its image preview
+            is unavailable.
+          </p>
+        </div>
+      )}
+      <figcaption>
+        <div className="snapshot-image-caption">
+          <strong>{node.title}</strong>
+          {!node.decorative && node.alt_text && <p>{node.alt_text}</p>}
+        </div>
+        <div className="image-source-meta">
+          <span>
+            {node.width_px && node.height_px
+              ? `${node.width_px} × ${node.height_px} px`
+              : "Image dimensions not recorded"}
+            {node.decorative ? " · Decorative" : ""}
+          </span>
+          {node.asset_id && (
+            <button
+              type="button"
+              className="small-text-button"
+              onClick={() => onSource(node.asset_id!)}
+            >
+              Inspect image source <ArrowUpRight size={14} />
+            </button>
+          )}
+        </div>
+        <details className="technical-details">
+          <summary>Image provenance</summary>
+          <dl>
+            <KeyValue label="Source">
+              {source?.filename ?? node.asset_id}
+            </KeyValue>
+            <KeyValue label="Original digest" mono>
+              {source?.digest ?? "Not recorded"}
+            </KeyValue>
+            <KeyValue label="Frozen image digest" mono>
+              {node.render_digest ?? "Not recorded in this legacy snapshot"}
+            </KeyValue>
+          </dl>
+        </details>
+      </figcaption>
+    </figure>
+  );
+}
+
+function PreparedViewNode(
+  props: Shared & { node: ReportNode; family: "grid" | "canvas" },
+) {
+  const { snapshot, node, family } = props;
+  if (node.kind === "image")
+    return <SnapshotImage {...props} key={`${snapshot.id}:${node.id}`} />;
+  if (node.kind === "rich_text")
+    return (
+      <div className={family === "grid" ? "sheet-prose" : "slide-prose"}>
+        <h3>{node.title}</h3>
+        <p>
+          <RichText {...props} node={node} />
+        </p>
+      </div>
+    );
   const dataset =
-    props.snapshot.datasets[
-      sheet === "Source aggregates" ? "pivot_source" : "regional_totals"
-    ];
+    snapshot.datasets[node.materialized_dataset_id ?? node.dataset_id ?? ""];
+  if (node.kind === "chart" && dataset)
+    return (
+      <section className={family === "grid" ? "sheet-chart" : "slide-chart"}>
+        <h3 className="view-node-heading">{node.title}</h3>
+        <RevenueChart {...props} dataset={dataset} />
+      </section>
+    );
+  if ((node.kind === "table" || node.kind === "pivot") && dataset)
+    return (
+      <section className={family === "grid" ? "sheet-data" : "slide-table"}>
+        <h3 className="view-node-heading">{node.title}</h3>
+        <DataTable {...props} dataset={dataset} pivot={node.kind === "pivot"} />
+        {node.kind === "pivot" && (
+          <p className="slide-note">
+            <Layers3 size={13} />
+            Materialized pivot aggregates
+          </p>
+        )}
+      </section>
+    );
+  return null;
+}
+
+export function WorkbookView(props: Shared) {
+  const [selectedSheet, setSelectedSheet] = useState("");
+  const nodes = nodesForView(props.snapshot, "workbook");
+  const groups = viewGroups(props.snapshot, "workbook");
+  const sheets =
+    props.snapshot.datasets.pivot_source &&
+    !groups.some((group) => group.name === "Source aggregates")
+      ? [
+          ...groups,
+          {
+            name: "Source aggregates",
+            node_ids: [],
+            dataset_id: "pivot_source",
+          },
+        ]
+      : groups;
+  const sheet = sheets.find((item) => item.name === selectedSheet) ?? sheets[0];
+  const sheetNodes = (sheet?.node_ids ?? [])
+    .map((id) => nodes.find((node) => node.id === id))
+    .filter((node): node is ReportNode => Boolean(node));
+  const onlyImages =
+    sheetNodes.length > 0 && sheetNodes.every((node) => node.kind === "image");
   return (
     <div className="workbook-view">
       <div className="workbook-formula">
-        <span className="cell-reference">
-          {sheet === "Overview"
-            ? "Overview"
-            : sheet === "Analysis"
-              ? "Analysis"
-              : "Source aggregates"}
-        </span>
+        <span className="cell-reference">{sheet?.name}</span>
         <span className="formula-label">ƒx</span>
         <span>
           Values from revision {props.snapshot.revision} ·{" "}
           {props.snapshot.period.label}
         </span>
       </div>
-      <div className="workbook-canvas">
+      <div
+        className="workbook-canvas"
+        id="workbook-sheet-content"
+        role="tabpanel"
+        aria-label={sheet?.name}
+      >
         <div className="sheet-heading">
-          <Table2 size={22} />
+          {onlyImages ? <ImageIcon size={22} /> : <Table2 size={22} />}
           <div>
             <h2>
-              {sheet === "Analysis"
-                ? "Regional analysis"
-                : sheet === "Source aggregates"
-                  ? "Approved source aggregates"
-                  : props.snapshot.title}
+              {sheet?.dataset_id
+                ? "Approved source aggregates"
+                : onlyImages
+                  ? "Report images"
+                  : sheet?.name === "Overview"
+                    ? props.snapshot.title
+                    : sheet?.name}
             </h2>
             <p>
-              {sheet === "Analysis"
-                ? "Materialized pivot and chart. Export to inspect workbook capabilities."
-                : sheet === "Source aggregates"
-                  ? "Approved aggregate records behind the pivot. Transaction IDs are excluded."
-                  : "Shared report facts, presented as a workbook."}
+              {sheet?.dataset_id
+                ? "Approved aggregate records behind the pivot. Transaction IDs are excluded."
+                : onlyImages
+                  ? "The image bytes and source identity preserved in this report snapshot."
+                  : "Shared report nodes, arranged by this snapshot’s workbook recipe."}
             </p>
           </div>
         </div>
-        {sheet === "Overview" && (
-          <>
-            <Metrics {...props} />
-            {nodes
-              .filter((n) => n.kind === "rich_text")
-              .map((node) => (
-                <div className="sheet-prose" key={node.id}>
-                  <h3>{node.title}</h3>
-                  <RichText {...props} node={node} />
-                </div>
-              ))}
-          </>
-        )}
-        {dataset && (
+        {sheet === sheets[0] && !onlyImages && <Metrics {...props} />}
+        {sheetNodes.map((node) => (
+          <PreparedViewNode
+            {...props}
+            node={node}
+            family="grid"
+            key={`${props.snapshot.id}:${node.id}`}
+          />
+        ))}
+        {sheet?.dataset_id && props.snapshot.datasets[sheet.dataset_id] && (
           <DataTable
             {...props}
-            dataset={dataset}
-            pivot={sheet === "Analysis"}
+            dataset={props.snapshot.datasets[sheet.dataset_id]}
           />
         )}
-        {sheet === "Analysis" && (
-          <div className="sheet-chart">
-            <RevenueChart
-              {...props}
-              dataset={props.snapshot.datasets.regional_totals}
-            />
-          </div>
-        )}
-        {sheet === "Overview" &&
-          nodes
-            .filter((n) => n.kind === "image")
-            .map((n) => (
-              <figure className="report-image" key={n.id}>
-                <img
-                  src={`/api/assets/${n.asset_id}/download`}
-                  alt={n.decorative ? "" : (n.alt_text ?? n.title)}
-                />
-              </figure>
-            ))}
       </div>
-      <div className="sheet-tabs">
-        <div className="sheet-controls">
-          <ChevronLeft size={14} />
-          <ChevronRight size={14} />
-        </div>
-        {["Overview", "Analysis", "Source aggregates"].map((name) => (
+      <div className="sheet-tabs" role="tablist" aria-label="Workbook sheets">
+        {sheets.map((item, index) => (
           <button
-            className={sheet === name ? "active" : ""}
-            key={name}
-            onClick={() => setSheet(name)}
+            type="button"
+            role="tab"
+            aria-selected={sheet?.name === item.name}
+            aria-controls="workbook-sheet-content"
+            tabIndex={sheet?.name === item.name ? 0 : -1}
+            className={sheet?.name === item.name ? "active" : ""}
+            key={item.name}
+            onClick={() => setSelectedSheet(item.name)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+                event.preventDefault();
+                const next =
+                  (index +
+                    (event.key === "ArrowRight" ? 1 : -1) +
+                    sheets.length) %
+                  sheets.length;
+                setSelectedSheet(sheets[next].name);
+                const buttons =
+                  event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                    'button[role="tab"]',
+                  );
+                buttons?.[next]?.focus();
+              }
+            }}
           >
-            {name}
+            {item.name}
           </button>
         ))}
-        <span>3 sheets</span>
+        <span>{sheets.length} sheets</span>
       </div>
     </div>
   );
 }
+
 export function PresentationView(props: Shared) {
-  const [slide, setSlide] = useState(0);
-  const nodes = getNodes(props.snapshot);
+  const [selectedSlide, setSelectedSlide] = useState(0);
+  const nodes = nodesForView(props.snapshot, "presentation");
+  const slides = viewGroups(props.snapshot, "presentation");
+  const index = Math.min(selectedSlide, Math.max(0, slides.length - 1));
+  const slide = slides[index];
+  const slideNodes = (slide?.node_ids ?? [])
+    .map((id) => nodes.find((node) => node.id === id))
+    .filter((node): node is ReportNode => Boolean(node));
+  const onlyImages =
+    slideNodes.length > 0 && slideNodes.every((node) => node.kind === "image");
   return (
     <div className="presentation-view">
       <div className="slide-navigation">
         <span className="eyebrow">PRESENTATION</span>
         <div>
-          <IconButton
-            label="Previous slide"
-            onClick={() => setSlide((s) => Math.max(0, s - 1))}
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Previous slide"
+            disabled={index === 0}
+            onClick={() =>
+              setSelectedSlide((current) => Math.max(0, current - 1))
+            }
           >
             <ChevronLeft size={16} />
-          </IconButton>
-          <span>{slide + 1} / 2</span>
-          <IconButton
-            label="Next slide"
-            onClick={() => setSlide((s) => Math.min(1, s + 1))}
+          </button>
+          <span aria-live="polite">
+            {index + 1} / {slides.length}
+          </span>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Next slide"
+            disabled={index >= slides.length - 1}
+            onClick={() =>
+              setSelectedSlide((current) =>
+                Math.min(slides.length - 1, current + 1),
+              )
+            }
           >
             <ChevronRight size={16} />
-          </IconButton>
+          </button>
         </div>
       </div>
-      <div className="slide-canvas">
+      <div
+        className={`slide-canvas${onlyImages ? " image-slide" : ""}`}
+        aria-label={`Slide ${index + 1}: ${slide?.name}`}
+      >
         <div className="slide-top">
           <span>REPORT FOUNDRY</span>
           <span>{props.snapshot.period.label}</span>
         </div>
-        <h2>{slide === 0 ? props.snapshot.title : "The regional picture"}</h2>
-        {slide === 0 ? (
-          <>
-            <Metrics {...props} />
-            {nodes
-              .filter((n) => n.kind === "rich_text")
-              .map((node) => (
-                <div className="slide-prose" key={node.id}>
-                  <span className="eyebrow">{node.title}</span>
-                  <p>
-                    <RichText {...props} node={node} />
-                  </p>
-                </div>
-              ))}
-          </>
-        ) : (
-          <>
-            <RevenueChart
-              {...props}
-              dataset={props.snapshot.datasets.regional_totals}
-            />
-            <div className="slide-table">
-              <DataTable
-                {...props}
-                dataset={props.snapshot.datasets.regional_totals}
-              />
-            </div>
-            <p className="slide-note">
-              <Layers3 size={12} />
-              Regional pivot is represented by these materialized aggregates.
-            </p>
-          </>
-        )}
+        <h2>{slide?.name}</h2>
+        {index === 0 && !onlyImages && <Metrics {...props} />}
+        {slideNodes.map((node) => (
+          <PreparedViewNode
+            {...props}
+            node={node}
+            family="canvas"
+            key={`${props.snapshot.id}:${node.id}`}
+          />
+        ))}
         <footer>
           <span>
-            {slide === 0 ? "Performance overview" : "Regional analysis"} ·
-            Revision {props.snapshot.revision}
+            {slide?.name} · Revision {props.snapshot.revision}
           </span>
-          {nodes
-            .filter((n) => n.kind === "image")
-            .map((n) => (
-              <img
-                key={n.id}
-                src={`/api/assets/${n.asset_id}/download`}
-                alt={n.decorative ? "" : (n.alt_text ?? n.title)}
-              />
-            ))}
-          <strong>{String(slide + 1).padStart(2, "0")}</strong>
+          <strong>{String(index + 1).padStart(2, "0")}</strong>
         </footer>
       </div>
-      <div className="slide-thumbnails">
-        {[0, 1].map((i) => (
-          <button
-            className={slide === i ? "active" : ""}
-            key={i}
-            onClick={() => setSlide(i)}
-          >
-            <span>{String(i + 1).padStart(2, "0")}</span>
-            {i === 0 ? <FileText size={28} /> : <BarChart3 size={28} />}
-            <strong>
-              {i === 0 ? "Performance overview" : "Regional analysis"}
-            </strong>
-          </button>
-        ))}
+      <div className="slide-thumbnails" aria-label="Choose a slide">
+        {slides.map((item, itemIndex) => {
+          const imageSlide =
+            item.node_ids.some(
+              (id) => nodes.find((node) => node.id === id)?.kind === "image",
+            ) &&
+            item.node_ids.every(
+              (id) => nodes.find((node) => node.id === id)?.kind === "image",
+            );
+          return (
+            <button
+              type="button"
+              className={index === itemIndex ? "active" : ""}
+              key={`${item.name}:${itemIndex}`}
+              aria-pressed={index === itemIndex}
+              aria-label={`Slide ${itemIndex + 1}: ${item.name}`}
+              onClick={() => setSelectedSlide(itemIndex)}
+            >
+              <span>{String(itemIndex + 1).padStart(2, "0")}</span>
+              {imageSlide ? (
+                <ImageIcon size={28} />
+              ) : itemIndex === 0 ? (
+                <FileText size={28} />
+              ) : (
+                <BarChart3 size={28} />
+              )}
+              <strong>{item.name}</strong>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -298,7 +298,12 @@ export default function App() {
   };
   const activeJob = job && ["queued", "running"].includes(job.status);
   const shared = snapshot
-    ? { snapshot, onFact: selectFact, selectedFact: fact }
+    ? {
+        snapshot,
+        onFact: selectFact,
+        selectedFact: fact,
+        onSource: (id: string) => void openSource(id),
+      }
     : null;
   const activeProgram = activeProgramFor(
     data.report_types.find((type) => type.id === snapshot?.report_type_id),

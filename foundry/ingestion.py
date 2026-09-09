@@ -14,7 +14,8 @@ MAX_EXPANDED = 80 * 1024 * 1024
 MAX_ROWS = 100_000
 COLUMNS = ['transaction_id', 'date', 'region', 'status', 'amount', 'currency']
 MIME = {'csv': 'text/csv', 'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'pdf': 'application/pdf'}
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'pdf': 'application/pdf',
+        'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg'}
 
 
 def _cell_observation(value):
@@ -140,15 +141,22 @@ def xlsx_structure(data):
     return sheets, candidates
 
 
-def inspect_asset(data: bytes, filename: str):
+def inspect_asset(data: bytes, filename: str, *, render_sink=None):
     if len(data) > MAX_BYTES or not data:
         raise DomainError('UPLOAD_LIMIT', 'Supply a nonempty file no larger than 20 MB.')
     filename = unicodedata.normalize('NFC', Path(filename.replace('\\', '/')).name)[:200]
     ext = filename.rsplit('.', 1)[-1].lower()
     if ext not in MIME:
-        raise DomainError('FORMAT_UNSUPPORTED', 'Supported inputs are CSV, XLSX, DOCX and text-based PDF.')
+        raise DomainError('FORMAT_UNSUPPORTED', 'Supported inputs are CSV, XLSX, DOCX, text-based PDF, PNG and JPEG.')
     profile = {'format': ext, 'warnings': [], 'eligible_roles': [], 'row_count': None, 'columns': [], 'regions': []}
-    if ext == 'csv':
+    if ext in {'png', 'jpg', 'jpeg'}:
+        from .images import normalize_image
+        rendered, image_profile = normalize_image(data, ext)
+        if render_sink is not None and render_sink(rendered) != image_profile['render_digest']:
+            raise DomainError('IMAGE_INTEGRITY', 'The image store returned a different render identity.', 409)
+        profile.update(image=image_profile, eligible_roles=['report_image'], parser='pillow/bounded-raster-v1')
+        profile['warnings'].append('Display and export use a PNG with orientation applied and metadata removed. The original remains available as evidence; image content is not interpreted as computed facts.')
+    elif ext == 'csv':
         columns, rows = rows_from_csv(data)
         profile.update(columns=columns, row_count=len(rows), sample_rows=rows[:8], parser='stdlib-csv/utf8-comma-v1')
         if set(columns) == set(COLUMNS) and len(columns) == len(COLUMNS):

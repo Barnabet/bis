@@ -26,6 +26,7 @@ def seed_demo(service):
     if existing:
         return {'report_type': existing[0], 'message': 'Demo already exists. Original records retained.'}
     asset = service.upload((ROOT / 'fixtures' / 'transactions.csv').read_bytes(), 'regional-transactions-demo.csv', demo=True)
+    image_asset = service.upload((ROOT / 'fixtures' / 'report-image.png').read_bytes(), 'report-image-demo.png', demo=True)
     result = service.create_type('Quarterly revenue report', 'Synthetic regional revenue fixture from the supplied architecture. Manually authored policy.', demo=True)
     program = result['program']
     for decision in program['decisions']:
@@ -35,13 +36,14 @@ def seed_demo(service):
         return {'error': 'Demo evaluation failed; candidate remains unpublished.', 'program': program}
     program = service.publish(program['id'], program['digest'], actor='system_fixture_policy_from_specification')
     from .runtime import default_period
-    job = service.request_run(result['report_type']['id'], asset['id'], default_period().model_dump(mode='json'), 'initial-synthetic-demo')
+    job = service.request_run(result['report_type']['id'], asset['id'], default_period().model_dump(mode='json'), 'initial-synthetic-demo',
+                              image={'asset_id': image_asset['id'], 'alt_text': 'Report Foundry wordmark with three green bars.', 'decorative': False})
     worker = Worker(service)
     while service.store.job(job['id'])['status'] in ('queued', 'running'):
         if not worker.run_one():
             break
     return {'report_type': service.store.get('report_type', result['report_type']['id']),
-            'asset': asset, 'program': program, 'job': service.store.job(job['id'])}
+            'asset': asset, 'image_asset': image_asset, 'program': program, 'job': service.store.job(job['id'])}
 
 
 def main():
@@ -73,6 +75,9 @@ def main():
     run = commands.add_parser('run', help='Generate from explicit period JSON and immutable source')
     run.add_argument('report_type_id'); run.add_argument('asset_id'); run.add_argument('--period', type=Path, required=True)
     run.add_argument('--key', required=True)
+    run.add_argument('--image-asset', help='Optional inspected PNG/JPEG asset ID')
+    run.add_argument('--image-alt', default='', help='Description required for a non-decorative image')
+    run.add_argument('--image-decorative', action='store_true', help='Explicitly mark the optional image decorative')
     export = commands.add_parser('export', help='Export an existing frozen native snapshot')
     export.add_argument('snapshot_id'); export.add_argument('format', choices=['docx', 'xlsx', 'pdf', 'pptx'])
     export.add_argument('--strict', action='store_true'); export.add_argument('--key', required=True)
@@ -113,7 +118,13 @@ def main():
             if args.command == 'run':
                 from .contracts import Period
                 period = Period.model_validate_json(args.period.read_text()).model_dump(mode='json')
-                job = service.request_run(args.report_type_id, args.asset_id, period, args.key)
+                image = None
+                if args.image_asset:
+                    image = {'asset_id': args.image_asset, 'alt_text': args.image_alt, 'decorative': args.image_decorative}
+                elif args.image_alt or args.image_decorative:
+                    from .errors import DomainError
+                    raise DomainError('IMAGE_REQUIRED', 'Provide --image-asset when using image description options.')
+                job = service.request_run(args.report_type_id, args.asset_id, period, args.key, image=image)
             else:
                 job = service.request_export(args.snapshot_id, args.format, 'strict' if args.strict else 'compatible', args.key)
             worker = Worker(service)

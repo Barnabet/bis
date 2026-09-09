@@ -29,6 +29,10 @@ export type ReportNode = {
   dataset_id?: string;
   materialized_dataset_id?: string;
   asset_id?: string;
+  render_digest?: string;
+  media_type?: string;
+  width_px?: number;
+  height_px?: number;
   alt_text?: string;
   decorative?: boolean;
   category_column?: string;
@@ -115,6 +119,25 @@ export type Asset = {
   profile?: Record<string, unknown>;
   extraction?: Record<string, unknown>;
   [key: string]: unknown;
+};
+export type ImageProfile = {
+  width_px: number;
+  height_px: number;
+  render_digest: string;
+  media_type: string;
+  normalization: string;
+};
+export const getImageProfile = (
+  asset: Asset | undefined,
+): ImageProfile | undefined => {
+  const image = asset?.profile?.image;
+  if (!image || typeof image !== "object") return undefined;
+  const profile = image as Record<string, unknown>;
+  return typeof profile.width_px === "number" &&
+    typeof profile.height_px === "number" &&
+    typeof profile.render_digest === "string"
+    ? (image as ImageProfile)
+    : undefined;
 };
 export type Program = {
   id: string;

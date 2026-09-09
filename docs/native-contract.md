@@ -20,7 +20,8 @@ snapshot = prepare(
     parent_id=None,
     created_at=None,              # supplied aware datetime/string or current time
     source_snapshot_digest=None,  # computed from bound source when omitted
-    image_asset=None,             # optional SourceAsset for the small brand image
+    image_asset=None,             # optional original image SourceAsset
+    image_metadata=None,          # validated binding and frozen PNG identity; see below
 )
 ```
 
@@ -52,9 +53,9 @@ All nodes have `id`, `kind`, and `title`.
 | table | `dataset_id` |
 | pivot | `dataset_id`, `materialized_dataset_id`, `row_dimensions`, `column_dimensions`, `measures:[{column_id,aggregation:'sum'}]`, `native_required_in:['grid']` |
 | chart | `dataset_id`, `chart_type:'bar'`, `category_column`, `series:[{column_id,label}]`, `axis_unit` |
-| image | `asset_id`, `alt_text`, `width_px`, `height_px`, `decorative` |
+| image | `asset_id`, `alt_text`, `width_px`, `height_px`, `decorative`, `render_digest`, `media_type:'image/png'` |
 
-Stable leaf IDs: `summary`, `commentary`, `regional_table`, `regional_chart`, `regional_pivot`, and optional `report_mark`. Root is `root`.
+Stable leaf IDs: `summary`, `commentary`, `regional_table`, `regional_chart`, `regional_pivot`, and optional `report_image`. Root is `root`. The legacy asset-only image fixture uses `report_mark` and has no exportable render identity.
 
 Stable dataset `regional_totals`: columns `region` (text), `current` (decimal EUR), `comparison` (decimal EUR), `change` (decimal EUR), `growth` (decimal ratio, nullable). Row order alphabetical by normalized region. `pivot_source`: `region` (text), `period` (text: current/comparison), `revenue` (decimal EUR). Only these approved aggregate columns are embedded in pivot caches; transaction IDs must never be embedded.
 
@@ -64,7 +65,21 @@ Core facts: `revenue.current`, `revenue.comparison`, `revenue.change`, `revenue.
 
 Views: `{id,family,title,node_ids,coverage,recipe}`. Families flow/grid/canvas. IDs `document`, `workbook`, `presentation`. `node_ids` contain leaves in intended order. Coverage is `{scope:'complete'|'executive',required_node_ids:[...],omitted_node_ids:[...]}`. Complete views must include every leaf; executive omissions must be explicit. Structural containers do not require a rendered location.
 
-Recipes contain family-specific placement data. The built-in flow declares a precision style and permits static pivots. Grid places summary/table on Overview and pivot/chart on Analysis, with a native pivot required. Canvas uses two slides. Renderers must produce a fidelity manifest and honestly distinguish static pivot renderings from native workbook functionality.
+Recipes contain family-specific placement data. The built-in flow declares a precision style and permits static pivots. Grid places summary/commentary/table on Overview and pivot/chart on Analysis, with a native pivot required. Canvas uses two slides. An optional image is included in every complete view: it follows the existing flow content, occupies an Images worksheet, and adds a dedicated third canvas slide. Renderers must produce a fidelity manifest and honestly distinguish static pivot renderings from native workbook functionality.
+
+## Frozen image contract
+
+The public revenue program supports zero or one still PNG/JPEG image per run. `ImageBinding` accepts only `{asset_id,alt_text,decorative}`. `decorative` defaults to false; `alt_text` is trimmed, limited to 500 characters, and must be nonempty unless the image is explicitly decorative. Validation cannot prove that the description is meaningful; non-decorative images add an `IMAGE_REVIEW_REQUIRED` finding linked to their original asset for human review. Pixels are never inputs to revenue facts or datasets, and no OCR or image interpretation runs.
+
+Ingestion bounds the original and normalized files to 20 MiB (20,971,520 bytes), each side to 8,192 pixels, and total area to 16,000,000 pixels. It rejects format/extension mismatches, animation, truncation and invalid embedded color profiles. It applies EXIF orientation, converts embedded profiles to sRGB, preserves transparency, and writes a metadata-free RGB/RGBA PNG. Original upload bytes remain an immutable `SourceAsset`; normalization creates a separate immutable object.
+
+The inspected asset's `profile.image` includes `{width_px,height_px,render_digest,media_type:'image/png',normalization:'exif_transpose_strip_metadata_png',color_conversion,original_format,original_width_px,original_height_px,has_alpha,render_size}`. `color_conversion` is `embedded_profile_to_srgb` or `rgb_without_embedded_profile`. The asset's `digest` identifies original evidence; `render_digest` identifies the exact normalized PNG used for display and export.
+
+The service freezes `image_metadata:{asset_id,alt_text,decorative,render_digest,media_type,width_px,height_px}` before calling `prepare`, alongside the original `image_asset`. The source snapshot digest includes the asset identities and this binding. Changing the selected image, description or decorative flag changes that identity without changing revenue calculation. Editorial and acceptance revisions retain the same image node and original source reference.
+
+Generation verifies the frozen derivative and original evidence identities. Snapshot preview and export resolve the image only through `render_digest`, verify the bytes and dimensions, and never re-normalize the original. Export adapters receive an `asset_resolver` that reads frozen objects by digest. Missing or corrupt render bytes block the operation; current asset metadata is never substituted for a historical snapshot binding. For schema compatibility, `render_digest` remains nullable and `media_type` defaults to `image/png`; legacy nodes lacking a frozen derivative remain readable but cannot preview or export an image.
+
+All four adapters preserve aspect ratio without cropping, stretching or upscaling. Office image objects carry descriptions and decorative metadata; their raster pixels are not native editable diagrams. PDF descriptions are visible and included in the fidelity manifest, while tagged-PDF accessibility remains uncertified. These image capabilities do not certify native Excel pivot interaction.
 
 ## Accepted source policy
 

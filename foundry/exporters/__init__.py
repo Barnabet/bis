@@ -18,10 +18,12 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 from zipfile import ZipFile
+from typing import Callable
 
 from .pivot import add_flat_pivot
+from .images import resolve_images, set_picture_properties, annotate_workbook_images
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 MEDIA_TYPES = {
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -191,7 +193,7 @@ def _plan(snapshot, fmt, policy):
         raise ExportError("A complete view must represent every content component.", "missing_coverage")
     selected = [nodes[i] for i in identifiers]
     for node in selected:
-        if node["kind"] not in {"rich_text", "table", "chart", "pivot"}:
+        if node["kind"] not in {"rich_text", "table", "chart", "pivot", "image"}:
             raise ExportError(f"The {node['kind']} component {node['id']} has no certified asset adapter.", "unsupported_component")
         if node["kind"] == "rich_text":
             _text(node, snapshot["facts"])
@@ -223,6 +225,8 @@ def _plan(snapshot, fmt, policy):
     warnings = []
     if fmt == "pdf":
         warnings.append({"code": "native_pdf_font_profile", "message": "The native PDF uses its Helvetica flow profile. It is independent of Word pagination and font rendering."})
+        if any(node["kind"] == "image" for node in selected):
+            warnings.append({"code": "pdf_image_tagging_unavailable", "message": "Report image descriptions are preserved in captions and the manifest. This PDF does not provide tagged image accessibility."})
     if fmt == "xlsx" and any(n["kind"] == "pivot" for n in selected):
         warnings.append({"code": "static_pivot_approved" if policy == "static" else "native_certification_pending",
                          "message": "The chosen policy permits a static pivot result." if policy == "static" else
@@ -237,7 +241,7 @@ def _location(node, representation, location, **extra):
             "semantic_coverage": "complete", **extra}
 
 
-def _docx(snapshot, nodes, path, policy, view):
+def _docx(snapshot, nodes, path, policy, view, images):
     from docx import Document
     from docx.shared import Inches, Pt, RGBColor, Mm
     from docx.oxml import OxmlElement
@@ -342,6 +346,20 @@ def _docx(snapshot, nodes, path, policy, view):
             doc.add_paragraph("Chart uses the accepted report values. The document contains a static image.", "Caption")
             mapping.append(_location(node, "raster_fallback", f"bookmark:rf_{node['id']}", editable=False,
                                      native_behavior="static chart", fallback_approval="flow view policy"))
+        elif node["kind"] == "image":
+            bound = images[node["id"]]
+            doc.add_heading(node["title"], 2)
+            width, height = bound.fit(float(sec.page_width-sec.left_margin-sec.right_margin)/914400, 6.2,
+                                      units_per_pixel=1/96)
+            picture = doc.add_picture(BytesIO(bound.data), width=Inches(width), height=Inches(height))
+            set_picture_properties(picture._inline.docPr, node)
+            set_picture_properties(picture._inline.xpath(".//pic:cNvPr")[0], node)
+            if node["alt_text"] and not node.get("decorative", False):
+                doc.paragraphs[-1].paragraph_format.keep_with_next = True
+                doc.add_paragraph(node["alt_text"], "Caption")
+            mapping.append(_location(node, "native_image", f"bookmark:rf_{node['id']}",
+                                     editable=False, placement_editable=True, alt_text_support="drawing_properties",
+                                     rendered_size={"width": width, "height": height, "unit": "in"}, **bound.manifest(node)))
     footer = sec.footer.paragraphs[0]
     footer.text = f"{_period_caption(snapshot)}   Revision {snapshot['revision']}"
     footer.style = doc.styles["Caption"]
@@ -366,7 +384,7 @@ def _docx(snapshot, nodes, path, policy, view):
     return mapping, validations, "python-docx", {"font": style.font.name, "font_substitution_certification": "pending", "paragraph_indent_pt": indent, "margin_mm": margin}
 
 
-def _xlsx(snapshot, nodes, path, policy, view):
+def _xlsx(snapshot, nodes, path, policy, view, images):
     import xlsxwriter
     from openpyxl import load_workbook
     workbook = xlsxwriter.Workbook(path, {"strings_to_urls": False, "strings_to_formulas": False})
@@ -482,7 +500,41 @@ def _xlsx(snapshot, nodes, path, policy, view):
         mapping.append(_location(chart_node, "native_chart", "Analysis!E3", editable=True))
     overview.print_area(0, 0, row_cursor, 4)
     analysis.print_area(0, 0, analysis_last_row, 8)
+    image_nodes = [node for node in nodes if node["kind"] == "image"]
+    if image_nodes:
+        image_sheet = workbook.add_worksheet("Images")
+        image_sheet.hide_gridlines(2)
+        image_sheet.set_column("A:J", 12)
+        image_sheet.set_default_row(20)
+        image_sheet.set_landscape()
+        image_sheet.fit_to_pages(1, 0)
+        image_sheet.set_paper(9)
+        image_sheet.set_margins(.3, .3, .5, .5)
+        image_sheet.set_header("&L" + _period_caption(snapshot))
+        image_row, page_breaks = 0, []
+        for node in image_nodes:
+            bound = images[node["id"]]
+            image_sheet.merge_range(image_row, 0, image_row+1, 9, node["title"], title)
+            image_sheet.merge_range(image_row+2, 0, image_row+2, 9, _period_caption(snapshot), subtitle)
+            width, height = bound.fit(800, 480, units_per_pixel=1)
+            image_sheet.insert_image(image_row+4, 0, BytesIO(bound.data), {
+                "x_scale": width/bound.width_px, "y_scale": height/bound.height_px,
+                "description": node["alt_text"], "decorative": node.get("decorative", False), "object_position": 1})
+            bottom_row = image_row+4+math.ceil(height/(20*96/72))
+            if node["alt_text"] and not node.get("decorative", False):
+                caption_rows = max(2, math.ceil(len(node["alt_text"])/110))
+                image_sheet.merge_range(bottom_row+1, 0, bottom_row+caption_rows, 9, node["alt_text"], body)
+                bottom_row += caption_rows
+            mapping.append(_location(node, "native_image", f"Images!A{image_row+5}",
+                                     editable=False, placement_editable=True, alt_text_support="drawing_properties",
+                                     rendered_size={"width": width, "height": height, "unit": "px"}, **bound.manifest(node)))
+            image_row = bottom_row+4
+            page_breaks.append(image_row)
+        image_sheet.print_area(0, 0, image_row-2, 9)
+        if len(page_breaks) > 1:
+            image_sheet.set_h_pagebreaks(page_breaks[:-1])
     workbook.close()
+    annotate_workbook_images(path, image_nodes)
     if pivot_node and policy != "static":
         pivot_meta = add_flat_pivot(path, source_rows)
     check = load_workbook(path, data_only=False)
@@ -502,7 +554,7 @@ def _xlsx(snapshot, nodes, path, policy, view):
     return mapping, validations, "XlsxWriter", {"pivot": pivot_meta, "numeric_policy": "Currency retains source decimal display precision. Ratios use native IEEE numeric storage and one-decimal percentage display. Exact decimal authority remains the snapshot."}
 
 
-def _pdf(snapshot, nodes, path, policy, view):
+def _pdf(snapshot, nodes, path, policy, view, images):
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_LEFT
     from reportlab.lib.styles import ParagraphStyle
@@ -519,6 +571,8 @@ def _pdf(snapshot, nodes, path, policy, view):
         elif node["kind"] in {"table", "pivot"}:
             headers, rows, _, _ = _table(snapshot, node, node["kind"] == "pivot")
             texts.extend(headers + [value for row in rows for value in row])
+        elif node["kind"] == "image" and not node.get("decorative", False):
+            texts.append(node["alt_text"])
     try:
         "".join(texts).encode("cp1252")
     except UnicodeEncodeError:
@@ -582,6 +636,18 @@ def _pdf(snapshot, nodes, path, policy, view):
             story.append(KeepTogether([tracked(escape(node["title"]), styles["head"], anchor), picture]))
             mapping.append(_location(node, "raster_fallback", f"named_destination:{anchor}", editable=False,
                                      fallback_approval="flow view policy"))
+        elif node["kind"] == "image":
+            bound = images[node["id"]]
+            width, height = bound.fit(content_width, 6.2*72, units_per_pixel=72/96)
+            picture = Image(BytesIO(bound.data), width=width, height=height)
+            picture.hAlign = "LEFT"
+            component = [tracked(escape(node["title"]), styles["head"], anchor), picture, Spacer(1, 7)]
+            if node["alt_text"] and not node.get("decorative", False):
+                component.append(Paragraph(escape(node["alt_text"]), styles["small"]))
+            story.append(KeepTogether(component))
+            mapping.append(_location(node, "embedded_image", f"named_destination:{anchor}",
+                                     editable=False, placement_editable=False, alt_text_support="manifest_and_visible_caption",
+                                     tagged_pdf=False, rendered_size={"width": width, "height": height, "unit": "pt"}, **bound.manifest(node)))
     def footer(canvas, document):
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(colors.HexColor("#"+MUTED))
@@ -607,7 +673,7 @@ def _pdf(snapshot, nodes, path, policy, view):
         "font_profile": "Helvetica / Windows Latin", "margin_mm": margin*25.4/72, "paragraph_indent_pt": indent}
 
 
-def _pptx(snapshot, nodes, path, policy, view):
+def _pptx(snapshot, nodes, path, policy, view, images):
     from pptx import Presentation
     from pptx.chart.data import CategoryChartData
     from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
@@ -709,6 +775,16 @@ def _pptx(snapshot, nodes, path, policy, view):
             locations.append(f"slide:{list(prs.slides).index(slide)+1}/shape:{shape.shape_id}")
         mapping.append(_location(node, "equivalent_static_table", locations, editable=True,
                                  native_behavior="static result", fallback_approval="canvas view policy"))
+    for node in [n for n in nodes if n["kind"] == "image"]:
+        bound = images[node["id"]]
+        slide = add_slide(node["title"])
+        width, height = bound.fit(12.05, 5.1, units_per_pixel=1/96)
+        x, y = .6+(12.05-width)/2, 1.6+(5.1-height)/2
+        picture = slide.shapes.add_picture(BytesIO(bound.data), Inches(x), Inches(y), Inches(width), Inches(height))
+        set_picture_properties(picture._element.nvPicPr.cNvPr, node)
+        mapping.append(_location(node, "native_image", f"slide:{len(prs.slides)}/shape:{picture.shape_id}",
+                                 editable=False, placement_editable=True, alt_text_support="drawing_properties",
+                                 rendered_size={"width": width, "height": height, "unit": "in"}, **bound.manifest(node)))
     for slide in prs.slides:
         for shape in slide.shapes:
             if min(shape.left, shape.top) < 0 or shape.left+shape.width > prs.slide_width or shape.top+shape.height > prs.slide_height:
@@ -738,7 +814,8 @@ def _verify_relationships(path):
                         raise ExportError("The generated export contains an external relationship.", "external_resource")
 
 
-def export_snapshot(snapshot: dict, format: str, output_dir: Path, policy="compatible") -> dict:
+def export_snapshot(snapshot: dict, format: str, output_dir: Path, policy="compatible", *,
+                    asset_resolver: Callable[[str], bytes] | None = None) -> dict:
     """Render bytes and a fidelity manifest from the same frozen snapshot.
 
     compatible includes a native XLSX pivot with an explicit pending consumer
@@ -756,6 +833,7 @@ def export_snapshot(snapshot: dict, format: str, output_dir: Path, policy="compa
         raise ExportError("The native snapshot failed its schema or reference checks.", "invalid_snapshot") from error
     fmt = format.lower().lstrip(".")
     view, nodes, warnings = _plan(snapshot, fmt, policy)
+    images = resolve_images(snapshot, nodes, asset_resolver)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     identifier = re.sub(r"[^A-Za-z0-9_-]", "-", str(snapshot["id"]))[:70] or "report"
@@ -766,12 +844,17 @@ def export_snapshot(snapshot: dict, format: str, output_dir: Path, policy="compa
         raise ExportError("An export with this filename already exists in this job directory.", "artifact_exists", 409)
     renderer = {"docx": _docx, "xlsx": _xlsx, "pdf": _pdf, "pptx": _pptx}[fmt]
     try:
-        mapping, validations, package, details = renderer(snapshot, nodes, path, policy, view)
+        mapping, validations, package, details = renderer(snapshot, nodes, path, policy, view, images)
         if {entry["node_id"] for entry in mapping} != set(view["node_ids"]):
             raise ExportError("Rendered coverage differs from the planned view.", "render_coverage_mismatch")
         _verify_relationships(path)
         validations.extend([{"check": "per_component_coverage", "status": "pass"},
                             {"check": "no_external_relationships", "status": "pass"}])
+        if images:
+            validations.extend([{"check": "frozen_image_digests_and_decoded_dimensions", "status": "pass"},
+                                {"check": "image_aspect_ratio_no_crop", "status": "pass"}])
+            if fmt == "pdf":
+                validations.append({"check": "tagged_image_accessibility", "status": "not_certified"})
         data = path.read_bytes()
         version = importlib.metadata.version(package)
         manifest = {
@@ -781,7 +864,7 @@ def export_snapshot(snapshot: dict, format: str, output_dir: Path, policy="compa
             "source_snapshot_digest": snapshot["source_snapshot_digest"],
             "format": fmt, "view_id": view["id"], "view_family": view["family"], "fidelity_policy": policy,
             "renderer": {"name": package, "version": version, "adapter_version": VERSION,
-                         "adapter_sha256": hashlib.sha256(Path(__file__).read_bytes() + Path(__file__).with_name("pivot.py").read_bytes()).hexdigest()},
+                         "adapter_sha256": hashlib.sha256(Path(__file__).read_bytes() + Path(__file__).with_name("pivot.py").read_bytes() + Path(__file__).with_name("images.py").read_bytes()).hexdigest()},
             "artifact": {"filename": filename, "media_type": MEDIA_TYPES[fmt], "sha256": hashlib.sha256(data).hexdigest(), "size_bytes": len(data)},
             "coverage": view["coverage"], "components": mapping, "validation_results": validations,
             "warnings": warnings, "details": details,

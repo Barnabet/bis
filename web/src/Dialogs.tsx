@@ -8,6 +8,7 @@ import {
   Eye,
   FileText,
   Info,
+  Image as ImageIcon,
   Layers3,
   LockKeyhole,
   Play,
@@ -21,7 +22,13 @@ import type {
   ReportNode,
   Snapshot,
 } from "./types";
-import { activeProgramFor, canRunProgram } from "./types";
+import {
+  activeProgramFor,
+  canRunProgram,
+  getImageProfile,
+  getNodes,
+} from "./types";
+import { ImagePreview } from "./ImagePreview";
 import { identifier, messageOf, post } from "./api";
 import { Badge, CheckLine, ErrorNotice, Modal, pretty, Spinner } from "./ui";
 
@@ -195,6 +202,28 @@ export function RunDialog({
       a.profile.eligible_roles.includes("transactions") &&
       a.status !== "blocked",
   );
+  const images = data.assets.filter(
+    (asset) =>
+      Array.isArray(asset.profile?.eligible_roles) &&
+      asset.profile.eligible_roles.includes("report_image") &&
+      asset.status !== "blocked" &&
+      Boolean(getImageProfile(asset)),
+  );
+  const previousImage = snapshot
+    ? getNodes(snapshot).find(
+        (node) =>
+          node.kind === "image" &&
+          node.render_digest &&
+          images.some((asset) => asset.id === node.asset_id),
+      )
+    : undefined;
+  const [imageId, setImageId] = useState(previousImage?.asset_id ?? "");
+  const [imageAlt, setImageAlt] = useState(previousImage?.alt_text ?? "");
+  const [imageDecorative, setImageDecorative] = useState(
+    previousImage?.decorative ?? false,
+  );
+  const imageAsset = images.find((asset) => asset.id === imageId);
+  const imageProfile = getImageProfile(imageAsset);
   const fallback = {
     label: "Q1 2026",
     start: "2026-01-01",
@@ -237,6 +266,12 @@ export function RunDialog({
       setError("Each end date must fall after its start date.");
       return;
     }
+    if (imageId && !imageDecorative && !imageAlt.trim()) {
+      setError(
+        "Describe the report image, or mark it as decorative if it conveys no information.",
+      );
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -252,6 +287,15 @@ export function RunDialog({
           as_of: asOf,
         },
         idempotency_key: identifier(),
+        ...(imageId
+          ? {
+              image: {
+                asset_id: imageId,
+                alt_text: imageDecorative ? "" : imageAlt.trim(),
+                decorative: imageDecorative,
+              },
+            }
+          : {}),
       });
       onJob(result);
     } catch (err) {
@@ -320,6 +364,106 @@ export function RunDialog({
               first.
             </div>
           )}
+          <fieldset className="report-image-fieldset">
+            <legend>
+              <ImageIcon size={16} />
+              Report image <span>Optional</span>
+            </legend>
+            <label className="field">
+              Image source
+              <select
+                value={imageId}
+                onChange={(event) => setImageId(event.target.value)}
+                disabled={active}
+              >
+                <option value="">None — report without an image</option>
+                {images.map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.filename}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!images.length && (
+              <p className="muted-small">
+                Upload a PNG or JPEG in Sources to include an image in this
+                report.
+              </p>
+            )}
+            {imageAsset && imageProfile && (
+              <>
+                <ImagePreview
+                  src={`/api/assets/${imageAsset.id}/preview`}
+                  alt={
+                    imageDecorative
+                      ? ""
+                      : imageAlt || `Preview of ${imageAsset.filename}`
+                  }
+                  className="run-image-preview"
+                />
+                <div className="image-source-meta">
+                  <span>
+                    {imageProfile.width_px} × {imageProfile.height_px} px
+                  </span>
+                  <span>Prepared PNG preview</span>
+                </div>
+                <label className="checkbox-field image-decoration-field">
+                  <input
+                    type="checkbox"
+                    checked={imageDecorative}
+                    onChange={(event) =>
+                      setImageDecorative(event.target.checked)
+                    }
+                    disabled={active}
+                  />
+                  <span>
+                    This image is decorative and conveys no report information.
+                  </span>
+                </label>
+                <label className="field">
+                  Image description{" "}
+                  <span className="optional">
+                    {imageDecorative
+                      ? "Omitted for decorative images"
+                      : "Required · up to 500 characters"}
+                  </span>
+                  <textarea
+                    value={imageAlt}
+                    onChange={(event) => setImageAlt(event.target.value)}
+                    rows={3}
+                    maxLength={500}
+                    required={!imageDecorative}
+                    disabled={active || imageDecorative}
+                    placeholder="Describe the information the image adds to this report."
+                  />
+                </label>
+                <p className="muted-small">
+                  {imageDecorative
+                    ? "The exported image will have empty alt text."
+                    : "This description becomes the image’s alt text in the report and supported exports."}
+                </p>
+                <details className="technical-details">
+                  <summary>Image source identity</summary>
+                  <dl>
+                    <div className="key-value">
+                      <dt>Original digest</dt>
+                      <dd className="mono">
+                        {imageAsset.digest ?? imageAsset.sha256}
+                      </dd>
+                    </div>
+                    <div className="key-value">
+                      <dt>Prepared image digest</dt>
+                      <dd className="mono">{imageProfile.render_digest}</dd>
+                    </div>
+                  </dl>
+                  <p className="muted-small">
+                    Orientation is applied and metadata is removed from the
+                    report image. The original source remains unchanged.
+                  </p>
+                </details>
+              </>
+            )}
+          </fieldset>
           <label className="field">
             Period label
             <input
@@ -760,7 +904,7 @@ export function ExportDialog({
           <Layers3 size={17} />
           <p>
             {format === "xlsx"
-              ? "Workbook native features are not certified in this release. Compatible export uses declared static representations; strict export is blocked."
+              ? "The workbook includes editable charts and pivot tables. Pivot interaction still needs certification in Excel; strict export is blocked."
               : "Pivots become static aggregates in this format. The fidelity manifest records how each report element is represented."}
           </p>
         </div>

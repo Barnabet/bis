@@ -74,12 +74,59 @@ class Service:
         return reason.strip()
 
     def upload(self, data, filename, demo=False):
-        inspected = inspect_asset(data, filename)
+        inspected = inspect_asset(data, filename, render_sink=self.store.put_blob)
         sha = self.store.put_blob(data)
         record = {'id': uid('asset'), **inspected, 'digest': sha, 'created_at': now(), 'demo': demo}
         self.store.insert('asset', record)
         self.store.audit(record['id'], 'uploaded', {'digest': sha, 'filename': record['filename']})
         return record
+
+    @staticmethod
+    def _declare_image_support(program):
+        program['input_contract']['optional_image'] = {
+            'role': 'report_image', 'formats': ['png', 'jpg', 'jpeg'], 'max_count': 1,
+            'max_bytes': 20 * 1024 * 1024, 'max_pixels': 16_000_000, 'max_edge_px': 8192,
+            'render_format': 'image/png', 'alt_text_required_unless_decorative': True,
+        }
+        program['policy']['image_handling'] = 'frozen_sanitized_png_with_user_description'
+        if not any(c['id'] == 'report_image' for c in program['coverage']):
+            program['coverage'].append({'id': 'report_image', 'label': 'Optional image with frozen provenance',
+                                        'kind': 'image', 'status': 'implemented'})
+
+    def image_preview(self, asset_id):
+        from .images import verify_render_image
+        asset = self.store.get('asset', asset_id)
+        image = asset['profile'].get('image')
+        if 'report_image' not in asset['profile'].get('eligible_roles', []) or not image:
+            raise DomainError('IMAGE_REQUIRED', 'This source is not a supported report image.', 422)
+        return verify_render_image(self.store.read_blob(image['render_digest']), image['render_digest'],
+                                   image['width_px'], image['height_px'])
+
+    def snapshot_image(self, snapshot_id, node_id):
+        from .contracts import Image
+        from .images import verify_render_image
+        snapshot = validate_stored_snapshot(self.store.get('snapshot', snapshot_id))
+        node = next((n for n in snapshot.nodes if n.id == node_id and isinstance(n, Image)), None)
+        if node is None or not node.render_digest:
+            raise DomainError('IMAGE_UNAVAILABLE', 'This report has no frozen image for that component.', 404)
+        return verify_render_image(self.store.read_blob(node.render_digest), node.render_digest,
+                                   node.width_px, node.height_px)
+
+    def _bind_image(self, binding):
+        from .contracts import ImageBinding
+        from pydantic import ValidationError
+        try:
+            binding = ImageBinding.model_validate(binding).model_dump(mode='json')
+        except ValidationError as exc:
+            raise DomainError('IMAGE_BINDING_INVALID', 'Choose an image and describe it, or explicitly mark it decorative.') from exc
+        asset = self.store.get('asset', binding['asset_id'])
+        info = asset['profile'].get('image')
+        if 'report_image' not in asset['profile'].get('eligible_roles', []) or not info:
+            raise DomainError('IMAGE_REQUIRED', 'The selected source is not an inspected PNG or JPEG image.')
+        self.store.read_blob(asset['digest'])
+        self.image_preview(asset['id'])
+        return binding, {**binding, 'source_digest': asset['digest'],
+                         **{k: info[k] for k in ('render_digest', 'media_type', 'width_px', 'height_px')}}
 
     def create_type(self, name, description='', demo=False):
         type_id, program_id = uid('type'), uid('program')
@@ -117,6 +164,7 @@ class Service:
                            'Native Excel pivot interaction requires certification in the intended spreadsheet application.',
                            'Single-user local runtime; no production multi-tenant sandbox.']
         }
+        self._declare_image_support(program)
         program['digest'] = program_digest(program)
         with self.store.transaction() as db:
             self.store.insert('report_type', report_type, db)
@@ -161,6 +209,7 @@ class Service:
             candidate.update(id=uid('program'), version=f'{major}.{minor + 1}.0', state='candidate',
                              created_at=now(), code_identity=installed, evaluation=None,
                              lineage={'parent_program_id': id, 'parent_program_digest': expected_digest, 'reason': reason})
+            self._declare_image_support(candidate)
             for decision in candidate['decisions']:
                 decision['prior_resolution'] = decision['resolution']
                 decision['inherited_from'] = {'program_id': id, 'program_digest': expected_digest,
@@ -226,6 +275,7 @@ class Service:
                 p = self._candidate(id, expected_digest, db)
                 p['code_identity'] = installed
                 p['evaluation'] = None
+                self._declare_image_support(p)
                 for component in p['coverage']:
                     component['status'] = 'implemented'
                 for decision in p['decisions']:
@@ -244,7 +294,14 @@ class Service:
         from .ingestion import rows_from_csv
         _, rows = rows_from_csv(fixture)
         source = {'id': 'fixture_transactions', 'digest': digest(fixture), 'filename': 'transactions.csv'}
-        snapshot = prepare(rows, default_period(), source, program={k: program[k] for k in ('id', 'version', 'digest')})
+        from .images import normalize_image
+        image_fixture = (ROOT / 'fixtures' / 'report-image.png').read_bytes()
+        image_bytes, image_profile = normalize_image(image_fixture, 'png')
+        image_source = {'id': 'fixture_report_image', 'digest': digest(image_fixture), 'filename': 'report-image.png'}
+        image_metadata = {k: image_profile[k] for k in ('width_px', 'height_px', 'render_digest', 'media_type')}
+        image_metadata.update(asset_id=image_source['id'], alt_text='Report Foundry wordmark with three green bars.', decorative=False)
+        snapshot = prepare(rows, default_period(), source, program={k: program[k] for k in ('id', 'version', 'digest')},
+                           image_asset=image_source, image_metadata=image_metadata)
         checks = []
         def check(name, passed, detail):
             checks.append({'name': name, 'passed': bool(passed), 'detail': detail})
@@ -255,20 +312,30 @@ class Service:
         check('Independent growth and driver', Decimal(facts['revenue.growth'].value) == Decimal('.2') and facts['driver.region'].value == 'North', 'Expected 20.0% and North, independent of display order.')
         Snapshot.model_validate(snapshot.model_dump())
         check('Native graph and complete views', len(snapshot.views) == 3, 'Fact lineage, dataset types and all three coverage maps validate.')
+        image_node = next(n for n in snapshot.nodes if n.kind == 'image')
+        check('Frozen image identity and complete coverage',
+              image_node.render_digest == digest(image_bytes) and all(image_node.id in v.node_ids for v in snapshot.views),
+              'The supplied PNG and its original source identity are bound to every view; image content is not computed evidence.')
         reversed_snapshot = prepare(list(reversed(rows)), default_period(), source)
         check('Input order invariance', reversed_snapshot.facts['revenue.current'].value == facts['revenue.current'].value and reversed_snapshot.facts['driver.region'].value == facts['driver.region'].value, 'Shuffled transactions preserve totals and selected driver.')
         # Structural render smoke checks are independent of candidate approval.
         from .exporters import export_snapshot
+        def resolve_fixture_image(sha):
+            if sha != image_profile['render_digest']:
+                raise DomainError('IMAGE_INTEGRITY', 'Evaluation requested an unbound image.', 409)
+            return image_bytes
         try:
             with tempfile.TemporaryDirectory(prefix='foundry-evaluate-') as folder:
                 for format in ('docx', 'xlsx', 'pdf', 'pptx'):
-                    output = export_snapshot(snapshot.model_dump(mode='json'), format, Path(folder) / format, policy='compatible')
+                    output = export_snapshot(snapshot.model_dump(mode='json'), format, Path(folder) / format, policy='compatible',
+                                             asset_resolver=resolve_fixture_image)
                     check(f'{format.upper()} export structure', Path(output['path']).is_file() and Path(output['path']).stat().st_size > 100,
                           'Rendered from one frozen snapshot. Native application certification and human visual review are separate.')
         except Exception as exc:
             check('Export capability smoke test', False, str(exc)[:500])
         evaluation = {'digest': expected_digest, 'passed': all(c['passed'] for c in checks), 'checks': checks,
-                      'created_at': now(), 'corpus': 'synthetic_development', 'holdout_count': 0}
+                      'created_at': now(), 'corpus': 'synthetic_development', 'holdout_count': 0,
+                      'image_fixture_digest': digest(image_fixture), 'image_render_digest': digest(image_bytes)}
         with self.store.transaction() as db:
             self._installed_code_identity()
             current = self._candidate(id, expected_digest, db)
@@ -324,7 +391,7 @@ class Service:
                                                                  'digest': expected_digest, 'actor': actor}, db)
         return program
 
-    def request_run(self, report_type_id, asset_id, period, idempotency_key):
+    def request_run(self, report_type_id, asset_id, period, idempotency_key, image=None):
         report_type = self.store.get('report_type', report_type_id)
         if not report_type['active_program_id']:
             raise DomainError('PROGRAM_UNPUBLISHED', 'Evaluate and publish this report type before generating a period.', 409)
@@ -335,6 +402,10 @@ class Service:
         payload = {'report_type_id': report_type_id, 'program_id': program['id'], 'program_digest': program['digest'],
                    'asset_id': asset_id, 'source_digest': asset['digest'], 'period': period}
         original_request = {'report_type_id': report_type_id, 'asset_id': asset_id, 'period': period}
+        if image is not None:
+            if not program['input_contract'].get('optional_image'):
+                raise DomainError('IMAGE_PROGRAM_UNSUPPORTED', 'Publish an updated program that supports report images before binding one.', 409)
+            original_request['image'], payload['image'] = self._bind_image(image)
         return self.store.enqueue('generation', f'run:{report_type_id}', idempotency_key, payload, request_identity=original_request)
 
     def request_export(self, snapshot_id, format, policy, idempotency_key):
@@ -411,10 +482,26 @@ class Service:
             raise DomainError('CODE_CHANGED', 'The installed runtime differs from the pinned release. Publish a new evaluated candidate.', 409)
         stage('Validating immutable source')
         asset = self.store.get('asset', payload['asset_id'])
+        if asset['digest'] != payload['source_digest']:
+            raise DomainError('SOURCE_INTEGRITY', 'The transaction source differs from the frozen request.', 409)
         rows = transaction_rows(self.store.read_blob(asset['digest']), asset['profile'])
+        image_asset, image_metadata = None, None
+        if payload.get('image'):
+            stage('Verifying frozen report image')
+            bound = payload['image']
+            image_asset = self.store.get('asset', bound['asset_id'])
+            if image_asset['digest'] != bound['source_digest']:
+                raise DomainError('IMAGE_INTEGRITY', 'The image source differs from the frozen request.', 409)
+            self.store.read_blob(bound['source_digest'])
+            from .images import verify_render_image
+            verify_render_image(self.store.read_blob(bound['render_digest']), bound['render_digest'],
+                                bound['width_px'], bound['height_px'])
+            image_metadata = {k: bound[k] for k in ('asset_id', 'alt_text', 'decorative', 'render_digest',
+                                                   'media_type', 'width_px', 'height_px')}
         stage('Preparing facts and shared data')
         snapshot = prepare(rows, payload['period'], source_ref(asset), program={k: program[k] for k in ('id', 'version', 'digest')},
-                           report_type_id=payload['report_type_id'])
+                           report_type_id=payload['report_type_id'], image_asset=source_ref(image_asset) if image_asset else None,
+                           image_metadata=image_metadata)
         self._installed_code_identity()
         report_type = self.store.get('report_type', payload['report_type_id'])
         raw = snapshot.model_dump(mode='json')
@@ -443,7 +530,8 @@ class Service:
         stage('Planning coverage and fidelity')
         with tempfile.TemporaryDirectory(prefix='foundry-export-', dir=self.store.root) as folder:
             stage(f'Rendering {payload["format"].upper()}')
-            output = export_snapshot(model.model_dump(mode='json'), payload['format'], Path(folder), policy=payload['policy'])
+            output = export_snapshot(model.model_dump(mode='json'), payload['format'], Path(folder), policy=payload['policy'],
+                                     asset_resolver=self.store.read_blob)
             stage('Verifying and storing artifact')
             path = Path(output['path']).resolve()
             if not path.is_relative_to(Path(folder).resolve()) or path.is_symlink():
@@ -531,4 +619,5 @@ class Service:
                 'snapshots': self.store.list('snapshot'), 'assets': self.store.list('asset'), 'jobs': self.store.jobs(),
                 'capabilities': {'formats': ['docx', 'xlsx', 'pdf', 'pptx'], 'learning': False,
                     'runtime': 'trusted_regional_revenue', 'native_pivot': 'structural_verified_target_certification_pending',
-                    'deployment': 'single_user_local', 'uploads': ['csv', 'xlsx', 'docx', 'pdf']}, 'demo': True}
+                    'deployment': 'single_user_local', 'uploads': ['csv', 'xlsx', 'docx', 'pdf', 'png', 'jpg', 'jpeg'],
+                    'images': {'formats': ['png', 'jpg', 'jpeg'], 'max_per_report': 1, 'frozen_png_export': True}}, 'demo': True}

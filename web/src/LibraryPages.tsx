@@ -9,12 +9,14 @@ import {
   Fingerprint,
   FolderOpen,
   GitBranch,
+  Image as ImageIcon,
   Plus,
   Search,
   Upload,
 } from "lucide-react";
 import type { Asset, Bootstrap, SnapshotSummary } from "./types";
-import { activeProgramFor, canRunProgram } from "./types";
+import { activeProgramFor, canRunProgram, getImageProfile } from "./types";
+import { ImagePreview } from "./ImagePreview";
 import { api, messageOf } from "./api";
 import {
   Badge,
@@ -322,7 +324,7 @@ export function SourcesPage({
         ref={input}
         className="sr-only"
         type="file"
-        accept=".csv,.xlsx,.docx,.pdf"
+        accept=".csv,.xlsx,.docx,.pdf,.png,.jpg,.jpeg"
         aria-label="Upload source file"
         onChange={(e) => void upload(e.target.files?.[0])}
       />
@@ -350,7 +352,8 @@ export function SourcesPage({
             </span>
             <strong>Drop a source here, or browse files</strong>
             <span>
-              CSV, XLSX, DOCX or PDF · Source inspection runs automatically
+              CSV, XLSX, DOCX, PDF, PNG or JPEG · Source inspection runs
+              automatically
             </span>
           </>
         )}
@@ -371,7 +374,9 @@ export function SourcesPage({
               onClick={() => onOpen(asset.id)}
             >
               <span className={`file-icon ${asset.filename.split(".").pop()}`}>
-                {/\.csv$|\.xlsx$/i.test(asset.filename) ? (
+                {/\.(png|jpe?g)$/i.test(asset.filename) ? (
+                  <ImageIcon size={22} />
+                ) : /\.csv$|\.xlsx$/i.test(asset.filename) ? (
                   <FileSpreadsheet size={22} />
                 ) : (
                   <FileText size={22} />
@@ -384,9 +389,13 @@ export function SourcesPage({
                     asset.profile?.format ?? asset.filename.split(".").pop(),
                   ).toUpperCase()}{" "}
                   <b>·</b>{" "}
-                  {typeof asset.profile?.row_count === "number"
-                    ? `${asset.profile.row_count} rows`
-                    : "Document source"}
+                  {getImageProfile(asset)
+                    ? `${getImageProfile(asset)!.width_px} × ${getImageProfile(asset)!.height_px} px`
+                    : typeof asset.profile?.row_count === "number"
+                      ? `${asset.profile.row_count} rows`
+                      : /\.(png|jpe?g)$/i.test(asset.filename)
+                        ? "Image source"
+                        : "Document source"}
                   {asset.demo === true && <em>Synthetic demo</em>}
                 </span>
               </span>
@@ -424,6 +433,7 @@ export function SourceDetail({
   onClose: () => void;
 }) {
   const profile = asset.profile ?? {};
+  const imageProfile = getImageProfile(asset);
   const rows = Array.isArray(profile.sample_rows)
     ? (profile.sample_rows as Record<string, unknown>[])
     : [];
@@ -450,7 +460,11 @@ export function SourceDetail({
       <div className="modal-body">
         <div className="source-detail-summary">
           <span className="large-file-icon">
-            <FileSpreadsheet size={32} strokeWidth={1.5} />
+            {imageProfile ? (
+              <ImageIcon size={32} strokeWidth={1.5} />
+            ) : (
+              <FileSpreadsheet size={32} strokeWidth={1.5} />
+            )}
           </span>
           <div>
             <Badge status={String(asset.status ?? "usable")} />
@@ -466,8 +480,10 @@ export function SourceDetail({
           <KeyValue label="Format">
             {String(profile.format ?? asset.media_type ?? "Document")}
           </KeyValue>
-          <KeyValue label="Rows">
-            {String(profile.row_count ?? "Not tabular")}
+          <KeyValue label={imageProfile ? "Image dimensions" : "Rows"}>
+            {imageProfile
+              ? `${imageProfile.width_px} × ${imageProfile.height_px} px`
+              : String(profile.row_count ?? "Not tabular")}
           </KeyValue>
           <KeyValue label="Added">{shortDate(asset.created_at)}</KeyValue>
           <KeyValue label="Eligible roles">
@@ -481,8 +497,30 @@ export function SourceDetail({
             {pretty(warning)}
           </div>
         ))}
-        <h3 className="detail-subheading">Content preview</h3>
-        {rows.length ? (
+        <h3 className="detail-subheading">
+          {imageProfile ? "Prepared report image" : "Content preview"}
+        </h3>
+        {imageProfile ? (
+          <>
+            <ImagePreview
+              src={`/api/assets/${asset.id}/preview`}
+              alt={`Prepared preview of ${asset.filename}`}
+              className="source-image-preview"
+            />
+            <p className="image-normalization-note">
+              The report uses an orientation-corrected PNG with image metadata
+              removed. The immutable original is available separately above.
+            </p>
+            <dl className="source-properties">
+              <KeyValue label="Report image format">
+                {imageProfile.media_type}
+              </KeyValue>
+              <KeyValue label="Preparation">
+                Orientation applied · metadata removed
+              </KeyValue>
+            </dl>
+          </>
+        ) : rows.length ? (
           <div className="table-scroll source-preview">
             <table className="data-table">
               <thead>
@@ -521,6 +559,16 @@ export function SourceDetail({
             <KeyValue label="Asset identifier" mono>
               {asset.id}
             </KeyValue>
+            {imageProfile && (
+              <>
+                <KeyValue label="Prepared image digest" mono>
+                  {imageProfile.render_digest}
+                </KeyValue>
+                <KeyValue label="Preparation method" mono>
+                  {imageProfile.normalization}
+                </KeyValue>
+              </>
+            )}
           </dl>
           <pre>{pretty(profile)}</pre>
         </details>
