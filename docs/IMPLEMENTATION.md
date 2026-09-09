@@ -6,7 +6,7 @@ The workspace supplies two architectural proposals and no executable reference p
 
 The implemented deterministic foundation comprises a typed native snapshot, exact period-based revenue computation, fact-linked prose, table/chart/pivot content, an optional supplied image, three views, and independent DOCX/XLSX/PDF/PPTX exports. A local workbench, source inspection, persisted jobs, publication gates, report review, and immutable editorial revisions surround that core.
 
-The built-in regional revenue package and fixtures are manually authored synthetic examples. There are no customer examples, hidden holdouts, or model-quality claims. Arbitrary automatic policy learning and execution of uploaded/generated Python are outside this release. Uploaded historical reports are catalogued as evidence, never used as new-period numbers.
+The built-in Python adapter and fixtures are manually authored. Bounded learning now compares three registered selection policies against independently inspected historical report/source pairs; optional OpenAI assistance proposes decisions within that envelope. There are no customer examples, hidden benchmark holdouts or live model-quality claims. Arbitrary reporting-policy synthesis and execution of uploaded/generated Python remain outside this release. Historical report values are evaluation observations, never production source inputs.
 
 ## Architecture
 
@@ -41,6 +41,28 @@ Candidate evaluation now uses `fixtures/report-image.png` alongside synthetic re
 ## Trust boundary
 
 This is a loopback-only, single-user application. It has no authentication or tenant boundary and must not be exposed as a hosted service. The API accepts only the registered reporting program, not arbitrary Python or template execution. Parsers reject active/external Office relationships, archive traversal/oversized expansion and unsupported formula-derived inputs. This does not constitute a production parser sandbox.
+
+## Paired examples and bounded authoring
+
+An immutable example binds one historical target, one distinct transaction source, explicit period, label/caveats and corpus role. DOCX inspection inventories ordered body regions and unsupported structural material so the learner cannot gain apparent completeness by omitting a region. The observation adapter independently reads explicit EUR/percentage labels, regional table cells and ordered membership, selected-region prose and the registered exact disclosure. It stores original target identity, locators, extraction methods and displayed precision. Unsupported notation, units, prose and region kinds remain unresolved.
+
+The learner receives compact authoring/development cases without a Store or filesystem tool. It executes only the registered Python adapter under three selection options, comparing every candidate against the independent observations. It preserves multiple compatible hypotheses and contradictory examples instead of guessing a winner. The program's accepted selection changes computation, driver provenance and wording. No universal business-rule language or arbitrary Python executor was introduced.
+
+An optional OpenAI call sees the bounded analysis and requirements, proposes an implemented option and explains remaining questions. The host validates its response and stores a receipt. Proposed choices never resolve their own consequential decisions. Every target region remains mapped, unresolved or explicitly out of scope with a reason and author. Region review does not claim template fidelity or validate an unknown numerical rule.
+
+Learning jobs freeze candidate and corpus identities. Their final transaction checks both identities and the worker lease before writing candidate evidence and completing the job together. New decisions, changed examples, scope reviews and package changes invalidate evaluation. Publication additionally binds reference fixture identities and current corpus membership/exposure state. Public reconstruction reports located discrepancies; reserved evaluation reports only its gate result.
+
+Reserved pairs are withheld by original content digest across asset aliases, ordinary previews/downloads, learning and production bindings. A pair cannot be retroactively reserved after example reuse, report use or durable generation/composition work has pinned its contents. Explicit reveal appends exposure history and changes its effective role to development. This is an application access boundary for the local workflow, not tenant authorization or a claim that repeatedly queried reserved gates remain statistically untouched.
+
+## Captured model composition
+
+The provider adapter uses the fixed OpenAI Responses endpoint with structured output, tools disabled and `store:false`. Credentials stay in the server environment. Its configuration and hard budgets are pinned in job input; request/schema/output digests, model identity, response ID and usage appear in receipts. Deterministic tests inject transport responses; no live credential or live semantic-quality result was used for this milestone.
+
+Composition is a separate explicit job against a frozen report. It receives available facts and at most five selected qualitative source files, bounded further to twelve excerpts, 6,000 characters per excerpt and 24,000 characters overall. Historical targets and reserved sources are excluded by digest. The proposal permits one to three English paragraphs, eight to 150 words, and typed fact placeholders. It must reference the current total and selected region. Numeric literals, unsupported rankings, invalid references, hidden text, links and unverified quotations are rejected. Causal wording is restricted to attributed exact quotations from cited evidence and still requires review.
+
+The host permits two composition attempts total. It captures validated provider result envelopes as immutable objects keyed by logical job/request identity, allowing a retried stage to reuse a recorded response. A crash or cancellation during an unrecorded network call can still leave uncertainty about remote work; no exactly-once billing guarantee is made. Successful composition creates a new review-required revision with frozen evidence, model receipt and attempt findings. Lease fencing and a check for newer sibling revisions protect the final commit. The original facts and snapshot remain unchanged, and exports never call the provider.
+
+Deterministic checks and human acceptance are the present assurance boundary. There is no independent model semantic grader, calibrated reviewer accuracy, broad qualitative retrieval or automatic production narration hidden inside preparation. Archived program files still require restoration into a compatible installed runtime; they are not separately executable per-version environments.
 
 ## Validation
 

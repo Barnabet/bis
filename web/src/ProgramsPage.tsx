@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -14,7 +14,8 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import type { Program, ReportType } from "./types";
+import type { Asset, Job, ModelStatus, Program, ReportType } from "./types";
+import { LearningPanel } from "./LearningPanel";
 import { programLifecycle } from "./types";
 import { messageOf, post } from "./api";
 import {
@@ -154,10 +155,26 @@ export function ProgramsPage({
   programs,
   reportTypes,
   onRefresh,
+  assets,
+  model,
+  job,
+  jobProgramId,
+  focusedProgramId,
+  onJob,
+  onCancelJob,
+  onSource,
 }: {
   programs: Program[];
   reportTypes: ReportType[];
   onRefresh: () => Promise<void>;
+  assets: Asset[];
+  model: ModelStatus | undefined;
+  job: Job | null;
+  jobProgramId: string | null;
+  focusedProgramId: string | null;
+  onJob: (job: Job, programId: string) => void;
+  onCancelJob: () => void;
+  onSource: (id: string) => void;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -166,6 +183,9 @@ export function ProgramsPage({
   const [decisions, setDecisions] = useState<Record<string, string>>({});
   const [action, setAction] = useState<LifecycleAction | null>(null);
   const closeAction = useCallback(() => setAction(null), []);
+  useEffect(() => {
+    if (focusedProgramId) setSelected(focusedProgramId);
+  }, [focusedProgramId]);
   const activePrograms = programs.filter(
     (p) => programLifecycle(p, reportTypes) === "active",
   );
@@ -186,7 +206,12 @@ export function ProgramsPage({
   const readOnly = lifecycle === "historical" || lifecycle === "discarded";
   const restartRequired = program?.runtime_status === "restart_required";
   const codeChanged = program?.runtime_status === "code_changed";
-  const canReview = candidate && !restartRequired && !codeChanged;
+  const runningJob = Boolean(job && ["queued", "running"].includes(job.status));
+  const canReview =
+    candidate && !restartRequired && !codeChanged && !runningJob;
+  useEffect(() => {
+    setDecisions({});
+  }, [program?.digest]);
   const existingCandidate = candidates.find(
     (p) => p.report_type_id === program?.report_type_id,
   );
@@ -392,6 +417,11 @@ export function ProgramsPage({
                       !canReview ||
                       !evaluationCurrent ||
                       !program.evaluation?.passed ||
+                      Boolean(
+                        program.learning?.coverage.some(
+                          (row) => row.status === "needs_decision",
+                        ),
+                      ) ||
                       program.decisions.some((d) => !d.resolution)
                     }
                     onClick={() => void act("publish")}
@@ -437,8 +467,8 @@ export function ProgramsPage({
                 {active
                   ? "The installed runtime differs from this frozen release. Create and review a program update before starting another report run."
                   : program.lineage?.parent_program_id
-                    ? "The installed runtime differs from this candidate. Discard it and create a new update from the active release before reviewing it."
-                    : "The installed runtime differs from this initial candidate. Restore its matching application version before continuing review."}
+                    ? "The installed runtime differs from this candidate. With at least one authoring example paired below, learning again can bind it to the current application and clear its earlier approvals and evaluation. Development examples provide supplemental evidence. You can also discard it and create a new update from the active release."
+                    : "The installed runtime differs from this initial candidate. Pair at least one authoring example below, then learn from examples to bind the candidate to the current application. Development examples provide supplemental evidence. Learning clears its earlier approvals and evaluation; review and evaluate it again before publication."}
               </p>
             </div>
           )}
@@ -543,6 +573,25 @@ export function ProgramsPage({
               </details>
             </section>
           )}
+          <LearningPanel
+            key={program.id}
+            program={program}
+            assets={assets}
+            model={model}
+            editable={candidate && !restartRequired}
+            busyElsewhere={runningJob || Boolean(busy)}
+            job={
+              job?.kind === "learning" &&
+              (jobProgramId === program.id ||
+                job.result?.program_id === program.id)
+                ? job
+                : null
+            }
+            onJob={(nextJob) => onJob(nextJob, program.id)}
+            onCancel={onCancelJob}
+            onRefresh={onRefresh}
+            onSource={onSource}
+          />
           <div className="program-grid">
             <section className="program-section">
               <div className="section-heading">

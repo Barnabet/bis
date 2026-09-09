@@ -175,25 +175,51 @@ def inspect_asset(data: bytes, filename: str, *, render_sink=None):
             profile['warnings'].append('No unambiguous value-only transaction sheet. Formula results are retained as observations, never silently used as current values.')
     elif ext == 'docx':
         from docx import Document
-        inspect_zip(data, 'docx')
+        archive = inspect_zip(data, 'docx')
         doc = Document(BytesIO(data))
         regions = []
+        body_order = {element: index for index, element in enumerate(doc.element.body)}
         for index, p in enumerate(doc.paragraphs):
             if p.text.strip():
                 regions.append({'id': f'p{index}', 'kind': 'paragraph', 'text': p.text, 'style': p.style.name,
-                                'locator': f'word/document.xml/paragraph[{index}]', 'status': 'uninvestigated'})
+                                'locator': f'word/document.xml/paragraph[{index}]', 'order': body_order.get(p._p, index), 'status': 'uninvestigated'})
         for index, t in enumerate(doc.tables):
             regions.append({'id': f't{index}', 'kind': 'table', 'rows': [[c.text for c in r.cells] for r in t.rows],
-                            'locator': f'word/document.xml/table[{index}]', 'status': 'uninvestigated'})
+                            'locator': f'word/document.xml/table[{index}]', 'order': body_order.get(t._tbl, index), 'status': 'uninvestigated'})
+        regions.sort(key=lambda r: r['order'])
         for index, sec in enumerate(doc.sections):
-            for kind in ('header', 'footer'):
-                txt = '\n'.join(p.text for p in getattr(sec, kind).paragraphs if p.text)
+            for kind in ('header', 'footer', 'first_page_header', 'first_page_footer', 'even_page_header', 'even_page_footer'):
+                part = getattr(sec, kind)
+                txt = '\n'.join(p.text for p in part.paragraphs if p.text)
                 if txt:
                     regions.append({'id': f'{kind}{index}', 'kind': kind, 'text': txt, 'locator': f'section[{index}]/{kind}', 'status': 'uninvestigated'})
-        profile.update(regions=regions, parser='python-docx/native-v1', eligible_roles=['historical_target', 'commentary'])
-        profile['warnings'].append('Structural observations retained. Automated interpretation and exact layout recovery are not implemented.')
-        if doc.inline_shapes:
-            profile['warnings'].append(f'{len(doc.inline_shapes)} inline images retained in the original; visual interpretation requires review.')
+                for table_index, table in enumerate(part.tables):
+                    regions.append({'id': f'{kind}{index}_table{table_index}', 'kind': kind,
+                                    'rows': [[c.text for c in r.cells] for r in table.rows],
+                                    'locator': f'section[{index}]/{kind}/table[{table_index}]', 'status': 'uninvestigated'})
+        # Preserve difficult structures as explicit inventory items, not discarded extraction warnings.
+        ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+        for name in archive.namelist():
+            if name.startswith('word/') and name.endswith('.xml') and any(x in name for x in ('document', 'header', 'footer', 'footnotes', 'endnotes')):
+                root = ET.fromstring(archive.read(name))
+                for index, drawing in enumerate(root.findall('.//w:drawing', ns) + root.findall('.//w:pict', ns)):
+                    regions.append({'id': f'drawing_{len(regions)}', 'kind': 'image',
+                                    'text': 'Embedded drawing or image; its content and placement require review.',
+                                    'locator': f'{name}/drawing[{index}]', 'status': 'uninvestigated'})
+                for index, box in enumerate(root.findall('.//w:txbxContent', ns)):
+                    regions.append({'id': f'textbox_{len(regions)}', 'kind': 'textbox',
+                                    'text': ' '.join(e.text or '' for e in box.findall('.//w:t', ns)),
+                                    'locator': f'{name}/textbox[{index}]', 'status': 'uninvestigated'})
+                if 'footnotes' in name or 'endnotes' in name:
+                    for index, note in enumerate(root):
+                        txt = ' '.join(e.text or '' for e in note.findall('.//w:t', ns)).strip()
+                        if txt:
+                            regions.append({'id': f'note_{len(regions)}', 'kind': 'footnote', 'text': txt,
+                                            'locator': f'{name}/note[{index}]', 'status': 'uninvestigated'})
+        if len(regions) > 500 or sum(len(str(r)) for r in regions) > 1_000_000:
+            raise DomainError('DOCUMENT_LIMIT', 'The local document inspector supports at most 500 regions and 1 MB of structural text.')
+        profile.update(regions=regions, parser='python-docx/native-v2', eligible_roles=['historical_target', 'commentary'])
+        profile['warnings'].append('Located structure is preserved. Learning recognizes a bounded regional-report profile; other regions and exact layout require review.')
     else:
         from pypdf import PdfReader
         if not data.startswith(b'%PDF-'):

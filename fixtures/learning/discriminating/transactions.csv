@@ -1,0 +1,9 @@
+transaction_id,date,region,status,amount,currency
+discriminating-current-0,2026-01-15,East,posted,100.00,EUR
+discriminating-comparison-0,2025-01-15,East,posted,10.00,EUR
+discriminating-current-1,2026-01-15,North,posted,1000.00,EUR
+discriminating-comparison-1,2025-01-15,North,posted,990.00,EUR
+discriminating-current-2,2026-01-15,South,posted,500.00,EUR
+discriminating-comparison-2,2025-01-15,South,posted,100.00,EUR
+discriminating-cancelled,2026-01-15,North,cancelled,999999.00,EUR
+discriminating-outside,2023-01-15,East,posted,999999.00,EUR

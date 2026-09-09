@@ -116,6 +116,8 @@ export type Asset = {
   created_at?: string;
   synthetic?: boolean;
   role?: string;
+  reserved?: boolean;
+  access_reason?: string;
   profile?: Record<string, unknown>;
   extraction?: Record<string, unknown>;
   [key: string]: unknown;
@@ -130,6 +132,7 @@ export type ImageProfile = {
 export const getImageProfile = (
   asset: Asset | undefined,
 ): ImageProfile | undefined => {
+  if (asset?.reserved) return undefined;
   const image = asset?.profile?.image;
   if (!image || typeof image !== "object") return undefined;
   const profile = image as Record<string, unknown>;
@@ -186,6 +189,7 @@ export type Program = {
   };
   limitations: string[];
   input_contract: unknown;
+  learning?: ProgramLearning | null;
   [key: string]: unknown;
 };
 export type Job = {
@@ -219,6 +223,84 @@ export type Bootstrap = {
   jobs: Job[];
   capabilities: Record<string, unknown> | unknown[];
   demo?: boolean;
+  historical_target_asset_ids?: string[];
+};
+
+export type ModelStatus = {
+  configured: boolean;
+  provider: string;
+  model: string | null;
+  limits?: Record<string, unknown>;
+};
+export type HistoricalExample = {
+  id: string;
+  report_type_id: string;
+  label?: string;
+  caveats?: string;
+  period: Period;
+  corpus_role: "authoring" | "development" | "reserved";
+  effective_role: "authoring" | "development" | "reserved";
+  report_asset_id: string;
+  source_asset_ids: string[];
+  report_filename: string;
+  source_filenames: string[];
+  digest: string;
+  state: string;
+  inspection: {
+    regions: unknown[];
+    observations: unknown[];
+    issues: unknown[];
+  } | null;
+  exposed: boolean;
+};
+export type LearningCoverage = {
+  id: string;
+  example_id: string;
+  region_id: string;
+  locator: unknown;
+  kind: string;
+  text: string;
+  component_id: string | null;
+  status: "mapped" | "needs_decision" | "out_of_scope";
+  reason: string;
+};
+export type ProgramLearning = {
+  engine: string;
+  model_proposal?: {
+    selection: string;
+    rationale: string;
+    unresolved_questions: string[];
+  };
+  model_receipt?: Record<string, unknown>;
+  requirements: string;
+  corpus_digest: string;
+  example_ids: string[];
+  hypotheses: {
+    value: string;
+    label: string;
+    supported: boolean;
+    checks: {
+      example_id: string;
+      expected: unknown;
+      actual: unknown;
+      passed: boolean;
+      locator: unknown;
+    }[];
+  }[];
+  coverage: LearningCoverage[];
+  assumptions: string[];
+  limitations: string[];
+};
+export const getModelStatus = (
+  capabilities: Bootstrap["capabilities"],
+): ModelStatus | undefined => {
+  if (Array.isArray(capabilities)) return undefined;
+  const model = capabilities.model;
+  return model &&
+    typeof model === "object" &&
+    typeof (model as Record<string, unknown>).configured === "boolean"
+    ? (model as ModelStatus)
+    : undefined;
 };
 export const getNodes = (snapshot: Snapshot) =>
   Array.isArray(snapshot.nodes)

@@ -1,0 +1,11 @@
+{
+  "label": "Q4 2025",
+  "start": "2025-10-01",
+  "end_exclusive": "2026-01-01",
+  "comparison": {
+    "start": "2024-10-01",
+    "end_exclusive": "2025-01-01"
+  },
+  "timezone": "Europe/Paris",
+  "as_of": "2026-01-03T12:00:00+01:00"
+}

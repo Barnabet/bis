@@ -51,7 +51,13 @@ export function JobProgress({
           <Badge status={job.status} />
         )}
         <span className="muted-small">
-          {job.kind === "export" ? "Export job" : "Report run"}
+          {job.kind === "export"
+            ? "Export job"
+            : job.kind === "learning"
+              ? "Learning job"
+              : job.kind === "composition"
+                ? "Commentary draft"
+                : "Report run"}
         </span>
       </div>
       {steps.length > 0 && (
@@ -92,7 +98,7 @@ export function CreateTypeDialog({
   onCreated,
 }: {
   onClose: () => void;
-  onCreated: () => Promise<void>;
+  onCreated: (programId: string) => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -103,11 +109,11 @@ export function CreateTypeDialog({
     setBusy(true);
     setError(null);
     try {
-      await post("/report-types", {
+      const result = await post<{ program: { id: string } }>("/report-types", {
         name: name.trim(),
         description: description.trim(),
       });
-      await onCreated();
+      await onCreated(result.program.id);
       onClose();
     } catch (err) {
       setError(messageOf(err));
@@ -150,9 +156,9 @@ export function CreateTypeDialog({
           <div className="notice info">
             <Info size={17} />
             <p>
-              This local release supports a regional revenue program. Creating a
-              report type starts a candidate using that adapter; it does not
-              infer a policy from historical reports.
+              This workspace supports a regional revenue program. Creating a
+              report type starts a candidate using that adapter. Pair historical
+              examples in Programs to compare the supported reporting policies.
             </p>
           </div>
           {error && <ErrorNotice message={error} />}

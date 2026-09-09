@@ -2,7 +2,7 @@
 
 A working local reporting application built from `Periodic_Report_System_Architecture.docx`. It materializes one typed, immutable native report and exports that same revision to DOCX, XLSX, PDF and PPTX.
 
-The included regional revenue program is manually authored and the data is synthetic. It demonstrates the deterministic reporting and export foundation described in the brief. It does not claim to learn arbitrary reporting policies from uploaded examples.
+The registered regional revenue adapter can compare historical report/source pairs to distinguish three implemented selection policies. The included data and historical targets are synthetic. Optional OpenAI assistance proposes a policy or drafts fact-bound commentary; users review consequential decisions and every composed draft. This is bounded policy learning, not arbitrary reporting-program synthesis.
 
 ## Run locally
 
@@ -28,7 +28,9 @@ For frontend development, run `npm --prefix web run dev` alongside the API. Vite
 - Explicit current/comparison intervals, timezone and data cutoff. Exact decimal arithmetic, deterministic driver selection, missing-period blocking, distinct missing/zero states, row-level source references and fact dependency checks.
 - A native report with fact-linked prose, a typed regional table, a chart, a pivot definition, an optional image and flow/grid/canvas presentations. Click facts to inspect their definitions and origins.
 - Candidate versions within the same report type, policy decisions, independent synthetic regression evaluation, compare-and-swap publication, frozen source-code packages, and a pinned release for each run. The active release remains selected while its replacement is reviewed.
+- Historical report/source pairs, independent target observations, a region coverage ledger, competing policy hypotheses and reconstruction evaluation. Reserved pair contents are withheld from authoring and ordinary asset access until explicitly revealed as development evidence.
 - Editable commentary creates a new immutable revision. Computed facts and prose are locked. Review acceptance creates an audited revision; it preserves earlier warnings and review findings in the acceptance history.
+- Optional OpenAI policy proposals and commentary composition through a bounded structured-response provider. Commentary uses frozen fact references and selected qualitative evidence, with deterministic checks, one repair attempt and mandatory human review. No live-provider quality result is claimed.
 - Persisted jobs with idempotency conflict detection, worker leases, heartbeats, stale-result fencing and cancellation. The deterministic local jobs restart safely as a unit after a crash; stages record progress, not invented percentages.
 - Four actual export adapters with per-component coverage and fidelity manifests. Exporting does not call source discovery, preparation or language generation.
 
@@ -57,6 +59,28 @@ example-1,2026-01-15,North,posted,500.00,EUR
 Dates are ISO local business dates. Status is `posted` or `cancelled`; currency is EUR; amounts are finite nonnegative decimals with at most two fractional digits. Transaction IDs are unique. The source must include posted records in both requested intervals. Absent regions within those assumed-complete, nonempty intervals become zero; an absent whole period blocks. A timestamp or formula-derived source requires an explicitly implemented adapter.
 
 The cutoff identifies the bound snapshot. There is no revision-timestamp column, so historical restatement filtering cannot be reconstructed. The app discloses this limitation.
+
+## Learn a supported selection policy
+
+Attach a historical DOCX/PDF report, one distinct CSV/XLSX transaction source and an explicit period to a report type. Assign its corpus role before learning. The current observation adapter recognizes explicit English EUR/percentage labels, supported regional tables, selected-region wording and the registered exact disclosure. Other regions remain visible and require a mapping implementation or an explicit scope exclusion with a reason. PDF page text, drawings, notes and complex layouts are not silently treated as reconstructed components.
+
+The deterministic learning job runs three registered Python policies against permitted authoring/development examples: largest absolute revenue change, largest absolute percentage change, and largest current-period revenue. It records their actual predictions and located discrepancies. Percentage selection excludes undefined ratios and blocks if every regional ratio is undefined. All policies use stable normalized-region tie breaks.
+
+Try the independently authored pairs in `fixtures/learning/ambiguous` and `fixtures/learning/discriminating`. Each contains an actual `report.docx`, `transactions.csv` and `period.json`. The first target selects North under all three policies, so the system retains the ambiguity. Adding the second pair distinguishes South by absolute change from North by current revenue and East by percentage change. Adding or revealing examples requires a fresh learning/evaluation basis before publication.
+
+Review the selection decision and any unresolved regions, evaluate the exact candidate, then publish it. The chosen policy changes the driver facts, dependencies and computed wording for future periods. Contradictory or incorrect historical observations fail reconstruction; the application does not silently select the nearest answer. The adapter's posted-EUR source semantics, missing-region assumption and core presentation remain explicitly bounded.
+
+Reserved targets and paired sources are withheld by content digest, including duplicate-file aliases. Explicitly revealing a pair records its transition to development evidence. Reserved evaluation exposes a pass/fail gate without target details; this access policy is not itself evidence of unseen-period accuracy, particularly after repeated evaluations. The repository's public synthetic pairs are never blind holdouts.
+
+## Optional model assistance
+
+Set `OPENAI_API_KEY` and an account-supported `FOUNDRY_OPENAI_MODEL` in the server environment to enable real OpenAI requests. The workbench/API exposes configuration status without returning the credential. Deterministic hypothesis search and the existing reporting/export workflow work without a key. No live API key was configured for the recorded provider tests; those tests exercise the actual adapter through an injected transport.
+
+AI-assisted learning receives only the bounded hypotheses, permitted target-region evidence and explicit requirements. It proposes one implemented policy and unresolved questions; it cannot change source calculations, reference observations, publication gates or application code.
+
+Commentary drafting receives the frozen report facts and up to five selected qualitative source files, within a smaller excerpt budget. Historical target reports and reserved evidence cannot be supplied as new-period commentary. The model has no tools and returns structured templates containing fact references. Successful drafting creates a new review-required snapshot; it never edits the original or accepts itself. Source identities, accepted structured responses, receipts and validation attempts are retained. Exporting that revision reuses its captured wording.
+
+The provider is bounded to the OpenAI Responses endpoint, no tools, 2,048 output tokens and 45 seconds per request. Composition permits at most two attempts total. Numeric-reference, exact-quotation and wording checks do not establish semantic truth; independent model grading and calibrated narrative-quality evaluation remain future work.
 
 ## Optional report image
 
@@ -123,11 +147,11 @@ uv run pytest
 npm --prefix web run build
 ```
 
-Tests cover independent expected results, source corruption, interval boundaries, cancellation, duplicate requests, missing periods, source drift, normalized region ties, provenance and graph cycles, immutable revisions, publication gates, unsupported prose, export coverage and actual Office structures. Image tests exercise normalization, bounds, frozen-byte integrity, descriptions, image-aware idempotency and export without re-reading original pixels. All example periods are exposed synthetic regression evidence; none is represented as an unseen holdout. See the [validation record](docs/VALIDATION.md) for the current automated and visual evidence.
+Tests cover independent expected results, source corruption, interval boundaries, cancellation, duplicate requests, missing periods, source drift, normalized region ties, provenance and graph cycles, immutable revisions, publication gates, unsupported prose, export coverage and actual Office structures. Image tests exercise normalization and frozen identity. Learning tests inspect real DOCX targets, preserve ambiguity, reject contradictions and compare values, display precision, table membership/order and exact disclosure text. Provider/composition tests cover response failures and fact/evidence constraints without claiming live-model quality. See the [validation record](docs/VALIDATION.md) for the current automated and visual evidence.
 
 ## Deliberately unfinished architecture work
 
-Automated learning, model-backed composition/review, image OCR or fact inference, execution of untrusted program code, arbitrary Office template recovery, advanced pivot features, parser isolation, PostgreSQL/object-store deployment, multi-user authentication/authorization, protected holdout access and production service limits remain future milestones. Historical documents can be catalogued and attached through the API, but the app does not pretend an upload has learned a program.
+Arbitrary Python program synthesis/execution, broader metric and source-policy learning, calibrated semantic model review, image OCR or fact inference, imported Office template recovery, advanced pivot features, parser isolation, PostgreSQL/object-store deployment, multi-user authentication/authorization, retention controls and measured production service limits remain future milestones. Archived runtime packages are evidence and restoration artifacts, not independently executable environments. The implemented hypothesis search and optional composition do not complete the broader architecture.
 
 This installation is a single-user, loopback-only development application. Do not expose it as a network service. Host/origin checks are defense in depth, not tenant authentication or a production sandbox.
 

@@ -52,6 +52,10 @@ class Worker:
                 self.service.execute_generation(job, stage)
             elif job['kind'] == 'export':
                 self.service.execute_export(job, stage)
+            elif job['kind'] == 'learning':
+                self.service.execute_learning(job, stage)
+            elif job['kind'] == 'composition':
+                self.service.execute_composition(job, stage)
             else:
                 raise DomainError('JOB_UNKNOWN', 'Unknown worker operation.', 500)
         except Exception as exc:

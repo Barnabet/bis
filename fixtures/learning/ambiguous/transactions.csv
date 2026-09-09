@@ -1,0 +1,9 @@
+transaction_id,date,region,status,amount,currency
+ambiguous-current-0,2025-10-15,East,posted,15.00,EUR
+ambiguous-comparison-0,2024-10-15,East,posted,10.00,EUR
+ambiguous-current-1,2025-10-15,North,posted,200.00,EUR
+ambiguous-comparison-1,2024-10-15,North,posted,100.00,EUR
+ambiguous-current-2,2025-10-15,South,posted,60.00,EUR
+ambiguous-comparison-2,2024-10-15,South,posted,50.00,EUR
+ambiguous-cancelled,2025-10-15,North,cancelled,999999.00,EUR
+ambiguous-outside,2023-01-15,East,posted,999999.00,EUR

@@ -22,6 +22,7 @@ snapshot = prepare(
     source_snapshot_digest=None,  # computed from bound source when omitted
     image_asset=None,             # optional original image SourceAsset
     image_metadata=None,          # validated binding and frozen PNG identity; see below
+    reporting_policy=None,        # or {'selection': one registered policy}; no other keys
 )
 ```
 
@@ -59,7 +60,7 @@ Stable leaf IDs: `summary`, `commentary`, `regional_table`, `regional_chart`, `r
 
 Stable dataset `regional_totals`: columns `region` (text), `current` (decimal EUR), `comparison` (decimal EUR), `change` (decimal EUR), `growth` (decimal ratio, nullable). Row order alphabetical by normalized region. `pivot_source`: `region` (text), `period` (text: current/comparison), `revenue` (decimal EUR). Only these approved aggregate columns are embedded in pivot caches; transaction IDs must never be embedded.
 
-Core facts: `revenue.current`, `revenue.comparison`, `revenue.change`, `revenue.growth`, `driver.region`, `driver.change`, `region.<key>.current`, `.comparison`, `.change`, `.growth`. Summary references current, growth, selected driver name/change, and total change. Reference formatting belongs to the fact registry.
+Core facts: `revenue.current`, `revenue.comparison`, `revenue.change`, `revenue.growth`, `driver.region`, `driver.change`, `region.<key>.current`, `.comparison`, `.change`, `.growth`. Percentage selection additionally produces `driver.growth`; current-revenue selection produces `driver.current`. The summary's computed wording and references change with the selected rule. Reference formatting belongs to the fact registry. `metadata.reporting_policy.selection` records the applied rule.
 
 ## Views
 
@@ -85,4 +86,22 @@ All four adapters preserve aspect ratio without cropping, stretching or upscalin
 
 CSV headers: `transaction_id,date,region,status,amount,currency`. `_line` may be supplied by the parser; otherwise record positions imply CSV lines starting at 2. An optional `_locator` string preserves native provenance such as `sheet=Transactions;row=2`; when present this is used exactly instead of fabricating CSV coordinates. Dates are local business dates; amount is a finite nonnegative decimal with at most two fractional digits; currency is EUR. `status` is posted/cancelled. Duplicate transaction IDs block. Normalize region with Unicode NFKC, collapsed whitespace, and casefold; merge equivalent spellings under deterministic title-cased display. Use stable safe IDs based on a readable key plus digest when needed.
 
-Both current and comparison must contain posted rows. Missing regions within these assumed-complete nonempty periods are zero. Sum posted rows inside explicit intervals. Rank drivers by descending absolute revenue movement, then normalized key. Relative growth with zero comparison is null/undefined. Formatting uses half-up rounding. Exact precision is retained in raw fact strings. Source locators identify included CSV lines; derived facts link upstream.
+Both current and comparison must contain posted rows. Missing regions within these assumed-complete nonempty periods are zero. Sum posted rows inside explicit intervals. The default selection ranks descending absolute revenue movement. The two other registered policies rank absolute percentage movement or current-period revenue. All break ties by normalized region key. Percentage selection excludes undefined ratios and raises `SELECTION_UNDEFINED` if none remain. Relative growth with zero comparison is null/undefined. Formatting uses half-up rounding. Exact precision is retained in raw fact strings. Source locators identify included CSV lines; derived facts link upstream.
+
+`reporting_policy` accepts exactly one `selection` key and one of `largest_absolute_change`, `largest_percentage_change`, `largest_current_revenue`. `None` preserves the original default behavior. The driver-name fact depends on the regional change, growth or current facts used for its ranking. When callers provide a published `program`, its digest is the host's authority for the accepted policy. Direct fixture preparation without a program gives nondefault policies a distinct default program digest. This is a bounded registered Python adapter, not an expression evaluator or arbitrary program loader.
+
+## Historical observations and component scope
+
+`inspect_target(asset)` reads only the original target's inspected regions and identity. It returns `{asset_id,asset_digest,observations,regions,issues}`. An observation stores `{id,fact_id,value,locator,method,region_id,unit,display?,display_decimals?}`. Numeric expected values come from explicit historical labels/cells; they are never computed from candidate output. Supported special IDs are `regional_totals.region_order` for ordered table membership, `policy.selection` for explicit supported selection wording, and `node.commentary.text` for the exact registered disclosure.
+
+`compare_snapshot(snapshot,inspection)` returns `{passed,checks,observation_count}`. It compares numeric values at their observed half-up display precision and separately checks table membership/order, selection wording and exact literal text. An empty observation set fails. Passing those comparisons does not account for unrecognized target regions: the historical coverage ledger separately preserves them as `needs_decision`, with explicit approved exclusions represented as `out_of_scope`. Native view coverage continues to account for the snapshot's leaves; it is not a substitute for historical target coverage.
+
+`analyze_examples(cases)` accepts already authorized authoring/development cases and tests the three registered policies. Reserved cases are rejected before candidate execution. It returns competing hypotheses, located discrepancies, complete region coverage, assumptions and limitations. Contradictions and multiple compatible rules remain unresolved rather than being converted to a fabricated confidence score.
+
+## Composed commentary revisions
+
+Composition consumes one validated frozen snapshot and bounded qualitative `Evidence` records: `{id,asset_id,artifact_sha256,locator,text}`. The service verifies source identity and excludes historical targets and reserved evidence before the composing boundary. Model output has one to three paragraphs `{template,evidence_refs}`. `{{fact_id}}` placeholders are validated against available snapshot facts and become ordinary typed fact runs; literal text remains text runs. There is no template expression evaluation.
+
+The implemented commentary contract requires references to `revenue.current` and `driver.region`, eight to 150 words and no unsupported numerical literals, rankings, links or hidden text. Quoted evidence must match a cited excerpt. Causal statements require exact attributed quotations and still receive a human-review finding. These checks do not prove semantic support; every usable proposal has `COMPOSITION_REVIEW_REQUIRED`.
+
+Successful composition changes only editable commentary in a new snapshot ID/revision. Original facts and image bindings remain intact. Selected qualitative sources join `source_assets`; the source snapshot identity records their addition. `metadata.composition` retains objective, evidence, receipt, attempts, used evidence references and originating job. Accepted structured provider results are stored separately as immutable objects for retry reuse. Acceptance remains a separate audited revision; exports read only frozen content and assets.

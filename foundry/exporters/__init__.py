@@ -126,11 +126,30 @@ def _chart_png(snapshot, node) -> bytes:
         except UnicodeEncodeError:
             raise ExportError("The static chart font profile does not cover these labels. A font-capable renderer is required.", "unsupported_font_glyph") from None
     width, height = 1200, max(500, len(categories) * 90 + 150)
-    result = Image.new("RGB", (width, height), "white")
-    draw = ImageDraw.Draw(result)
     font = ImageFont.load_default(size=24)
     small = ImageFont.load_default(size=21)
     left, right, top, bottom = 210, 1070, 75, height - 80
+    # Preserve full series labels and size the legend from actual font metrics.
+    # Fixed column offsets overlap when the period has a descriptive label.
+    legend, legend_x, legend_y, row_height = [], left, 0, 0
+    for name, _ in series:
+        available = width - left - 60
+        for wrap_width in range(min(80, max(1, len(name))), 0, -1):
+            lines = textwrap.wrap(name, width=wrap_width, break_long_words=True,
+                                  break_on_hyphens=False) or [""]
+            text_width = max(small.getlength(line) for line in lines)
+            if text_width <= available:
+                break
+        if legend_x > left and legend_x + 27 + text_width > width - 24:
+            legend_x, legend_y = left, legend_y + row_height + 10
+            row_height = 0
+        legend.append((legend_x, legend_y, lines))
+        row_height = max(row_height, len(lines) * 26)
+        legend_x += 27 + text_width + 32
+    legend_top = bottom + 44
+    height = max(height, legend_top + legend_y + row_height + 10)
+    result = Image.new("RGB", (width, height), "white")
+    draw = ImageDraw.Draw(result)
     values = [v for _, row in series for v in row]
     low, high = min(0, min(values)), max(0, max(values))
     span = high - low or 1
@@ -156,10 +175,11 @@ def _chart_png(snapshot, node) -> bytes:
             label_x = x + 8 if vals[i] >= 0 else max(0, x - 100)
             draw.text((label_x, y - 2), f"{vals[i]:,.2f}", fill=f"#{INK}", font=small)
     draw.text((8, 14), f"{node['title']} ({node['axis_unit']})", fill=f"#{INK}", font=font)
-    for j, (name, _) in enumerate(series):
-        x = left + j * 270
-        draw.rectangle((x, height - 28, x + 18, height - 10), fill=palette[j % len(palette)])
-        draw.text((x + 27, height - 31), name, fill=f"#{MUTED}", font=small)
+    for j, (x, y, lines) in enumerate(legend):
+        y += legend_top
+        draw.rectangle((x, y + 3, x + 18, y + 21), fill=palette[j % len(palette)])
+        for line_index, line in enumerate(lines):
+            draw.text((x + 27, y + line_index * 26), line, fill=f"#{MUTED}", font=small)
     buffer = BytesIO()
     result.save(buffer, format="PNG")
     return buffer.getvalue()

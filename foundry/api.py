@@ -65,6 +65,27 @@ class Example(Input):
     source_asset_ids: list[str] = Field(min_length=1, max_length=20)
     period: Period
     corpus_role: Literal['authoring', 'development', 'reserved']
+    label: str = Field(default='', max_length=100)
+    caveats: str = Field(default='', max_length=2000)
+
+class Learning(Evaluate):
+    requirements: str = Field(default='', max_length=4000)
+    engine: Literal['deterministic', 'openai'] = 'deterministic'
+    idempotency_key: str = Field(min_length=1, max_length=200)
+
+class CoverageReview(Evaluate):
+    coverage_id: str
+    disposition: Literal['out_of_scope']
+    reason: str = Field(min_length=1, max_length=1000)
+
+class Reveal(Input):
+    reason: str = Field(min_length=1, max_length=1000)
+
+class Composition(Input):
+    expected_revision: int = Field(ge=1)
+    source_asset_ids: list[str] = Field(default_factory=list, max_length=5)
+    objective: str = Field(min_length=1, max_length=1000)
+    idempotency_key: str = Field(min_length=1, max_length=200)
 
 
 def create_app(data_dir=None, start_worker=True):
@@ -130,12 +151,11 @@ def create_app(data_dir=None, start_worker=True):
 
     @app.get('/api/assets/{id}')
     def asset(id: str):
-        return store.get('asset', id)
+        return service.asset_view(id)
 
     @app.get('/api/assets/{id}/download')
     def download_asset(id: str):
-        a = store.get('asset', id)
-        data = store.read_blob(a['digest'])
+        a, data = service.asset_bytes(id)
         return download(data, a['filename'], a['media_type'])
 
     @app.get('/api/assets/{id}/preview')
@@ -144,7 +164,40 @@ def create_app(data_dir=None, start_worker=True):
 
     @app.post('/api/report-types/{id}/examples', status_code=201)
     def example(id: str, body: Example):
-        return service.add_example(id, body.report_asset_id, body.source_asset_ids, body.period.model_dump(mode='json'), body.corpus_role)
+        return service.add_example(id, body.report_asset_id, body.source_asset_ids, body.period.model_dump(mode='json'), body.corpus_role, body.label, body.caveats)
+
+    @app.get('/api/report-types/{id}/examples')
+    def examples(id: str):
+        return service.examples(id)
+
+    @app.get('/api/examples/{id}')
+    def example_detail(id: str):
+        return service.example_view(id)
+
+    @app.post('/api/examples/{id}/reveal')
+    def reveal_example(id: str, body: Reveal):
+        return service.reveal_example(id, body.reason)
+
+    @app.get('/api/model-status')
+    def model_status():
+        from .model_provider import status
+        return status()
+
+    @app.post('/api/programs/{id}/learn', status_code=202)
+    def learn(id: str, body: Learning):
+        job = service.request_learning(id, body.expected_digest, body.requirements, body.engine, body.idempotency_key)
+        worker.wake.set()
+        return job
+
+    @app.post('/api/programs/{id}/coverage')
+    def coverage(id: str, body: CoverageReview):
+        return service.review_coverage(id, body.expected_digest, body.coverage_id, body.disposition, body.reason)
+
+    @app.post('/api/report-snapshots/{id}/compose', status_code=202)
+    def compose(id: str, body: Composition):
+        job = service.request_composition(id, body.expected_revision, body.source_asset_ids, body.objective, body.idempotency_key)
+        worker.wake.set()
+        return job
 
     @app.get('/api/programs/{id}')
     def program(id: str):

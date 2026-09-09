@@ -10,6 +10,7 @@ import {
   FolderOpen,
   GitBranch,
   Image as ImageIcon,
+  LockKeyhole,
   Plus,
   Search,
   Upload,
@@ -374,7 +375,9 @@ export function SourcesPage({
               onClick={() => onOpen(asset.id)}
             >
               <span className={`file-icon ${asset.filename.split(".").pop()}`}>
-                {/\.(png|jpe?g)$/i.test(asset.filename) ? (
+                {asset.reserved ? (
+                  <LockKeyhole size={22} />
+                ) : /\.(png|jpe?g)$/i.test(asset.filename) ? (
                   <ImageIcon size={22} />
                 ) : /\.csv$|\.xlsx$/i.test(asset.filename) ? (
                   <FileSpreadsheet size={22} />
@@ -397,6 +400,7 @@ export function SourcesPage({
                         ? "Image source"
                         : "Document source"}
                   {asset.demo === true && <em>Synthetic demo</em>}
+                  {asset.reserved && <em>Reserved target · content hidden</em>}
                 </span>
               </span>
               <Badge status={String(asset.status ?? "usable")} />
@@ -432,7 +436,9 @@ export function SourceDetail({
   asset: Asset;
   onClose: () => void;
 }) {
-  const profile = asset.profile ?? {};
+  const profile = asset.reserved
+    ? { format: asset.profile?.format }
+    : (asset.profile ?? {});
   const imageProfile = getImageProfile(asset);
   const rows = Array.isArray(profile.sample_rows)
     ? (profile.sample_rows as Record<string, unknown>[])
@@ -467,90 +473,136 @@ export function SourceDetail({
             )}
           </span>
           <div>
-            <Badge status={String(asset.status ?? "usable")} />
+            <Badge
+              status={
+                asset.reserved ? "reserved" : String(asset.status ?? "usable")
+              }
+            />
             {asset.demo === true && (
               <p className="muted-small">Synthetic demonstration data</p>
             )}
           </div>
-          <ExternalLink href={`/api/assets/${asset.id}/download`}>
-            Download original
-          </ExternalLink>
+          {asset.reserved ? (
+            <button
+              type="button"
+              className="button secondary small"
+              disabled
+              title={
+                asset.access_reason || "Reserved target content is hidden."
+              }
+            >
+              <LockKeyhole size={14} />
+              Download unavailable
+            </button>
+          ) : (
+            <ExternalLink href={`/api/assets/${asset.id}/download`}>
+              Download original
+            </ExternalLink>
+          )}
         </div>
         <dl className="source-properties">
           <KeyValue label="Format">
             {String(profile.format ?? asset.media_type ?? "Document")}
           </KeyValue>
-          <KeyValue label={imageProfile ? "Image dimensions" : "Rows"}>
-            {imageProfile
-              ? `${imageProfile.width_px} × ${imageProfile.height_px} px`
-              : String(profile.row_count ?? "Not tabular")}
+          <KeyValue
+            label={
+              asset.reserved
+                ? "Inspection"
+                : imageProfile
+                  ? "Image dimensions"
+                  : "Rows"
+            }
+          >
+            {asset.reserved
+              ? "Withheld while reserved"
+              : imageProfile
+                ? `${imageProfile.width_px} × ${imageProfile.height_px} px`
+                : String(profile.row_count ?? "Not tabular")}
           </KeyValue>
           <KeyValue label="Added">{shortDate(asset.created_at)}</KeyValue>
           <KeyValue label="Eligible roles">
-            {Array.isArray(profile.eligible_roles)
-              ? profile.eligible_roles.join(", ") || "Reference only"
-              : "Reference only"}
+            {asset.reserved
+              ? "Withheld while reserved"
+              : Array.isArray(profile.eligible_roles)
+                ? profile.eligible_roles.join(", ") || "Reference only"
+                : "Reference only"}
           </KeyValue>
         </dl>
-        {warnings.map((warning, i) => (
-          <div className="notice warning" key={i}>
-            {pretty(warning)}
-          </div>
-        ))}
-        <h3 className="detail-subheading">
-          {imageProfile ? "Prepared report image" : "Content preview"}
-        </h3>
-        {imageProfile ? (
-          <>
-            <ImagePreview
-              src={`/api/assets/${asset.id}/preview`}
-              alt={`Prepared preview of ${asset.filename}`}
-              className="source-image-preview"
-            />
-            <p className="image-normalization-note">
-              The report uses an orientation-corrected PNG with image metadata
-              removed. The immutable original is available separately above.
+        {asset.reserved && (
+          <div className="notice info">
+            <LockKeyhole size={18} />
+            <p>
+              {asset.access_reason ||
+                "This historical target is reserved for evaluation. Its preview, extracted profile, and download are hidden. Reveal the example for development in Programs if you intend to expose it to learning."}
             </p>
-            <dl className="source-properties">
-              <KeyValue label="Report image format">
-                {imageProfile.media_type}
-              </KeyValue>
-              <KeyValue label="Preparation">
-                Orientation applied · metadata removed
-              </KeyValue>
-            </dl>
-          </>
-        ) : rows.length ? (
-          <div className="table-scroll source-preview">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  {columns.map((col) => (
-                    <th key={col}>{col}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, i) => (
-                  <tr key={i}>
-                    {columns.map((col) => (
-                      <td key={col}>{String(row[col] ?? "—")}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
-        ) : (
-          <p className="muted-small">
-            This source has no tabular preview. Download the preserved original
-            to inspect its content.
-          </p>
+        )}
+        {!asset.reserved && (
+          <>
+            {warnings.map((warning, i) => (
+              <div className="notice warning" key={i}>
+                {pretty(warning)}
+              </div>
+            ))}
+            <h3 className="detail-subheading">
+              {imageProfile ? "Prepared report image" : "Content preview"}
+            </h3>
+            {imageProfile ? (
+              <>
+                <ImagePreview
+                  src={`/api/assets/${asset.id}/preview`}
+                  alt={`Prepared preview of ${asset.filename}`}
+                  className="source-image-preview"
+                />
+                <p className="image-normalization-note">
+                  The report uses an orientation-corrected PNG with image
+                  metadata removed. The immutable original is available
+                  separately above.
+                </p>
+                <dl className="source-properties">
+                  <KeyValue label="Report image format">
+                    {imageProfile.media_type}
+                  </KeyValue>
+                  <KeyValue label="Preparation">
+                    Orientation applied · metadata removed
+                  </KeyValue>
+                </dl>
+              </>
+            ) : rows.length ? (
+              <div className="table-scroll source-preview">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      {columns.map((col) => (
+                        <th key={col}>{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, i) => (
+                      <tr key={i}>
+                        {columns.map((col) => (
+                          <td key={col}>{String(row[col] ?? "—")}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="muted-small">
+                This source has no tabular preview. Download the preserved
+                original to inspect its content.
+              </p>
+            )}
+          </>
         )}
         <details className="technical-details">
           <summary>
             <Fingerprint size={14} />
-            Source identity and full inspection
+            {asset.reserved
+              ? "Source identity"
+              : "Source identity and full inspection"}
           </summary>
           <dl>
             <KeyValue label="Content digest" mono>
@@ -570,7 +622,7 @@ export function SourceDetail({
               </>
             )}
           </dl>
-          <pre>{pretty(profile)}</pre>
+          {!asset.reserved && <pre>{pretty(profile)}</pre>}
         </details>
       </div>
       <footer className="modal-footer">

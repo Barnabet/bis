@@ -56,6 +56,25 @@ def main():
     commands.add_parser('seed-demo', help='Evaluate/publish the supplied synthetic reference and generate its native report')
     commands.add_parser('worker', help='Process persisted queued jobs until idle')
     commands.add_parser('status', help='List sources, programs, reports and jobs')
+    commands.add_parser('model-status', help='Show provider readiness and budgets without exposing credentials')
+    example = commands.add_parser('add-example', help='Pair a historical DOCX/PDF report with a transaction source')
+    example.add_argument('report_type_id'); example.add_argument('report_asset_id'); example.add_argument('source_asset_id')
+    example.add_argument('--period', type=Path, required=True)
+    example.add_argument('--role', choices=['authoring', 'development', 'reserved'], required=True)
+    example.add_argument('--label', default=''); example.add_argument('--caveats', default='')
+    examples = commands.add_parser('examples', help='Inspect permitted examples and reserved metadata')
+    examples.add_argument('report_type_id')
+    reveal = commands.add_parser('reveal-example', help='Permanently promote a reserved pair to development evidence')
+    reveal.add_argument('example_id'); reveal.add_argument('--reason', required=True, type=candidate_reason)
+    learn = commands.add_parser('learn', help='Investigate three executable selection policies against paired examples')
+    learn.add_argument('program_id'); learn.add_argument('--key', required=True)
+    learn.add_argument('--requirements', default=''); learn.add_argument('--engine', choices=['deterministic', 'openai'], default='deterministic')
+    coverage = commands.add_parser('exclude-region', help='Record an explicit, reasoned exclusion from historical reconstruction')
+    coverage.add_argument('program_id'); coverage.add_argument('coverage_id')
+    coverage.add_argument('--reason', required=True, type=candidate_reason)
+    compose = commands.add_parser('compose', help='Draft fact-bound commentary as a new reviewable revision')
+    compose.add_argument('snapshot_id'); compose.add_argument('--source', action='append', default=[])
+    compose.add_argument('--objective', required=True); compose.add_argument('--key', required=True)
     ingest = commands.add_parser('ingest', help='Inspect and store an immutable input')
     ingest.add_argument('file', type=Path)
     create = commands.add_parser('create-type', help='Create a report type using the trusted revenue adapter')
@@ -94,6 +113,21 @@ def main():
             result = seed_demo(service)
         elif args.command == 'status':
             result = service.bootstrap()
+        elif args.command == 'model-status':
+            from .model_provider import status
+            result = status()
+        elif args.command == 'add-example':
+            from .contracts import Period
+            period = Period.model_validate_json(args.period.read_text()).model_dump(mode='json')
+            result = service.add_example(args.report_type_id, args.report_asset_id, [args.source_asset_id], period,
+                                         args.role, args.label, args.caveats)
+        elif args.command == 'examples':
+            result = {'examples': service.examples(args.report_type_id)}
+        elif args.command == 'reveal-example':
+            result = service.reveal_example(args.example_id, args.reason)
+        elif args.command == 'exclude-region':
+            p = service.store.get('program', args.program_id)
+            result = service.review_coverage(p['id'], p['digest'], args.coverage_id, 'out_of_scope', args.reason)
         elif args.command == 'ingest':
             result = service.upload(args.file.read_bytes(), args.file.name)
         elif args.command == 'create-type':
@@ -125,6 +159,12 @@ def main():
                     from .errors import DomainError
                     raise DomainError('IMAGE_REQUIRED', 'Provide --image-asset when using image description options.')
                 job = service.request_run(args.report_type_id, args.asset_id, period, args.key, image=image)
+            elif args.command == 'learn':
+                p = service.store.get('program', args.program_id)
+                job = service.request_learning(p['id'], p['digest'], args.requirements, args.engine, args.key)
+            elif args.command == 'compose':
+                snapshot = service.store.get('snapshot', args.snapshot_id)
+                job = service.request_composition(snapshot['id'], snapshot['revision'], args.source, args.objective, args.key)
             else:
                 job = service.request_export(args.snapshot_id, args.format, 'strict' if args.strict else 'compatible', args.key)
             worker = Worker(service)

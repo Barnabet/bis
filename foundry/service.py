@@ -8,6 +8,7 @@ import tempfile
 from .storage import Store, digest, canonical, now, uid
 from .errors import DomainError
 from .ingestion import inspect_asset, transaction_rows
+from .authoring import AuthoringMixin
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -33,6 +34,8 @@ def program_digest(program):
     # Preserve the identities of releases created before lineage was introduced.
     if 'lineage' in program:
         fields['lineage'] = program['lineage']
+    if 'learning' in program:
+        fields['learning'] = program['learning']
     return digest(fields)
 
 
@@ -56,7 +59,7 @@ def validate_stored_snapshot(record):
     return Snapshot.model_validate(raw)
 
 
-class Service:
+class Service(AuthoringMixin):
     def __init__(self, store: Store):
         self.store = store
 
@@ -79,7 +82,7 @@ class Service:
         record = {'id': uid('asset'), **inspected, 'digest': sha, 'created_at': now(), 'demo': demo}
         self.store.insert('asset', record)
         self.store.audit(record['id'], 'uploaded', {'digest': sha, 'filename': record['filename']})
-        return record
+        return self.asset_view(record['id'])
 
     @staticmethod
     def _declare_image_support(program):
@@ -95,7 +98,7 @@ class Service:
 
     def image_preview(self, asset_id):
         from .images import verify_render_image
-        asset = self.store.get('asset', asset_id)
+        asset = self._guard_asset(self.store.get('asset', asset_id))
         image = asset['profile'].get('image')
         if 'report_image' not in asset['profile'].get('eligible_roles', []) or not image:
             raise DomainError('IMAGE_REQUIRED', 'This source is not a supported report image.', 422)
@@ -257,6 +260,8 @@ class Service:
             decision['resolution'] = resolution
             decision['resolved_at'] = now()
             decision['actor'] = 'local_user'
+            if decision_id == 'selection':
+                program['policy']['selection'] = resolution
             program['evaluation'] = None
             for component in program['coverage']:
                 component['status'] = 'implemented'
@@ -290,6 +295,7 @@ class Service:
             raise DomainError('CODE_CHANGED', 'Installed code changed. The candidate was refreshed; review its policy decisions and evaluate again.', 409)
         from .runtime import prepare, default_period
         from .contracts import Snapshot
+        basis = self._evaluation_basis(program)
         fixture = (ROOT / 'fixtures' / 'transactions.csv').read_bytes()
         from .ingestion import rows_from_csv
         _, rows = rows_from_csv(fixture)
@@ -301,7 +307,8 @@ class Service:
         image_metadata = {k: image_profile[k] for k in ('width_px', 'height_px', 'render_digest', 'media_type')}
         image_metadata.update(asset_id=image_source['id'], alt_text='Report Foundry wordmark with three green bars.', decorative=False)
         snapshot = prepare(rows, default_period(), source, program={k: program[k] for k in ('id', 'version', 'digest')},
-                           image_asset=image_source, image_metadata=image_metadata)
+                           image_asset=image_source, image_metadata=image_metadata,
+                           reporting_policy={'selection': program['policy']['selection']})
         checks = []
         def check(name, passed, detail):
             checks.append({'name': name, 'passed': bool(passed), 'detail': detail})
@@ -309,14 +316,17 @@ class Service:
         from decimal import Decimal
         check('Independent current total', Decimal(facts['revenue.current'].value) == Decimal('1200'), 'Expected EUR 1,200.00 from protected synthetic observations.')
         check('Independent comparison total', Decimal(facts['revenue.comparison'].value) == Decimal('1000'), 'Expected EUR 1,000.00; cancelled/out-of-period rows excluded.')
-        check('Independent growth and driver', Decimal(facts['revenue.growth'].value) == Decimal('.2') and facts['driver.region'].value == 'North', 'Expected 20.0% and North, independent of display order.')
+        expected_driver = {'largest_absolute_change': 'North', 'largest_current_revenue': 'North', 'largest_percentage_change': 'West'}[program['policy']['selection']]
+        check('Independent growth and driver', Decimal(facts['revenue.growth'].value) == Decimal('.2') and facts['driver.region'].value == expected_driver,
+              f'Expected 20.0% and {expected_driver} under the selected policy, independent of display order.')
         Snapshot.model_validate(snapshot.model_dump())
         check('Native graph and complete views', len(snapshot.views) == 3, 'Fact lineage, dataset types and all three coverage maps validate.')
         image_node = next(n for n in snapshot.nodes if n.kind == 'image')
         check('Frozen image identity and complete coverage',
               image_node.render_digest == digest(image_bytes) and all(image_node.id in v.node_ids for v in snapshot.views),
               'The supplied PNG and its original source identity are bound to every view; image content is not computed evidence.')
-        reversed_snapshot = prepare(list(reversed(rows)), default_period(), source)
+        reversed_snapshot = prepare(list(reversed(rows)), default_period(), source,
+                                    reporting_policy={'selection': program['policy']['selection']})
         check('Input order invariance', reversed_snapshot.facts['revenue.current'].value == facts['revenue.current'].value and reversed_snapshot.facts['driver.region'].value == facts['driver.region'].value, 'Shuffled transactions preserve totals and selected driver.')
         # Structural render smoke checks are independent of candidate approval.
         from .exporters import export_snapshot
@@ -333,12 +343,19 @@ class Service:
                           'Rendered from one frozen snapshot. Native application certification and human visual review are separate.')
         except Exception as exc:
             check('Export capability smoke test', False, str(exc)[:500])
-        evaluation = {'digest': expected_digest, 'passed': all(c['passed'] for c in checks), 'checks': checks,
-                      'created_at': now(), 'corpus': 'synthetic_development', 'holdout_count': 0,
+        historical = self._evaluate_examples(program)
+        checks.extend(historical['checks'])
+        if self._evaluation_basis(program) != basis:
+            raise DomainError('EVALUATION_BASIS_CHANGED', 'Evidence changed while evaluation was running; evaluate again.', 409)
+        evaluation = {'digest': expected_digest, 'basis_digest': basis, 'passed': all(c['passed'] for c in checks), 'checks': checks,
+                      'created_at': now(), 'corpus': 'paired_historical_examples' if program.get('learning') else 'synthetic_development',
+                      'holdout_count': historical['holdout_count'], 'reconstruction_count': historical['reconstruction_count'],
                       'image_fixture_digest': digest(image_fixture), 'image_render_digest': digest(image_bytes)}
         with self.store.transaction() as db:
             self._installed_code_identity()
             current = self._candidate(id, expected_digest, db)
+            if self._evaluation_basis(current) != basis:
+                raise DomainError('EVALUATION_BASIS_CHANGED', 'Evaluation evidence changed during the checks; run evaluation again.', 409)
             current['evaluation'] = evaluation
             for c in current['coverage']:
                 c['status'] = 'verified' if evaluation['passed'] else 'implemented'
@@ -365,6 +382,8 @@ class Service:
             evaluation = program.get('evaluation')
             if not evaluation or not evaluation['passed'] or evaluation['digest'] != expected_digest:
                 raise DomainError('EVALUATION_REQUIRED', 'This exact candidate must pass independent evaluation before publication.', 409)
+            if evaluation.get('basis_digest') != self._evaluation_basis(program):
+                raise DomainError('EVALUATION_BASIS_CHANGED', 'The evaluated examples or reference fixtures changed. Evaluate the exact current basis before publishing.', 409)
             if any(c['status'] != 'verified' for c in program['coverage']):
                 raise DomainError('COVERAGE_INCOMPLETE', 'Required components are not verified.', 409)
             package_files = {}
@@ -377,6 +396,8 @@ class Service:
                        'program_version': program['version'], 'code_identity': program['code_identity'],
                        'input_contract': program['input_contract'], 'lineage': program.get('lineage'),
                        'policy': program['policy'], 'decisions': program['decisions']}
+            if program.get('learning'):
+                package['learning'] = program['learning']
             self._installed_code_identity()
             program['package_artifact_digest'] = self.store.put_blob(canonical(package))
             program['state'] = 'published'
@@ -396,7 +417,7 @@ class Service:
         if not report_type['active_program_id']:
             raise DomainError('PROGRAM_UNPUBLISHED', 'Evaluate and publish this report type before generating a period.', 409)
         program = self.store.get('release', report_type['active_program_id'])
-        asset = self.store.get('asset', asset_id)
+        asset = self._guard_asset(self.store.get('asset', asset_id))
         if 'transactions' not in asset['profile']['eligible_roles']:
             raise DomainError('INPUT_DRIFT', 'Bind a supported transaction source.')
         payload = {'report_type_id': report_type_id, 'program_id': program['id'], 'program_digest': program['digest'],
@@ -462,17 +483,6 @@ class Service:
             self.store.audit(data['id'], 'human_accepted', {'parent_id': id, 'original_findings_preserved': True}, db)
         return data
 
-    def add_example(self, report_type_id, report_asset_id, source_asset_ids, period, corpus_role):
-        self.store.get('report_type', report_type_id)
-        self.store.get('asset', report_asset_id)
-        for asset_id in source_asset_ids:
-            self.store.get('asset', asset_id)
-        example = {'id': uid('example'), 'report_type_id': report_type_id, 'report_asset_id': report_asset_id,
-                   'source_asset_ids': source_asset_ids, 'period': period, 'corpus_role': corpus_role,
-                   'state': 'inspected', 'learning_status': 'not_implemented', 'created_at': now()}
-        self.store.insert('example', example)
-        return example
-
     def execute_generation(self, job, stage):
         from .runtime import prepare, RuntimeBlocked
         payload = job['payload']
@@ -481,7 +491,7 @@ class Service:
         if program['digest'] != payload['program_digest'] or program['code_identity'] != self._installed_code_identity():
             raise DomainError('CODE_CHANGED', 'The installed runtime differs from the pinned release. Publish a new evaluated candidate.', 409)
         stage('Validating immutable source')
-        asset = self.store.get('asset', payload['asset_id'])
+        asset = self._guard_asset(self.store.get('asset', payload['asset_id']))
         if asset['digest'] != payload['source_digest']:
             raise DomainError('SOURCE_INTEGRITY', 'The transaction source differs from the frozen request.', 409)
         rows = transaction_rows(self.store.read_blob(asset['digest']), asset['profile'])
@@ -501,7 +511,7 @@ class Service:
         stage('Preparing facts and shared data')
         snapshot = prepare(rows, payload['period'], source_ref(asset), program={k: program[k] for k in ('id', 'version', 'digest')},
                            report_type_id=payload['report_type_id'], image_asset=source_ref(image_asset) if image_asset else None,
-                           image_metadata=image_metadata)
+                           image_metadata=image_metadata, reporting_policy={'selection': program['policy']['selection']})
         self._installed_code_identity()
         report_type = self.store.get('report_type', payload['report_type_id'])
         raw = snapshot.model_dump(mode='json')
@@ -605,6 +615,7 @@ class Service:
             return self._program_view(program, report_type, installed, parent)
 
     def bootstrap(self):
+        from .model_provider import status as model_status
         installed = code_identity()
         with self.store.connect() as db:
             # One read transaction keeps active pointers and release labels consistent.
@@ -616,8 +627,9 @@ class Service:
                                            releases.get(p.get('lineage', {}).get('parent_program_id')))
                         for p in self.store.list('program', db)]
         return {'report_types': report_types, 'programs': programs,
-                'snapshots': self.store.list('snapshot'), 'assets': self.store.list('asset'), 'jobs': self.store.jobs(),
-                'capabilities': {'formats': ['docx', 'xlsx', 'pdf', 'pptx'], 'learning': False,
+                'snapshots': self.store.list('snapshot'), 'assets': [self.asset_view(a['id']) for a in self.store.list('asset')], 'jobs': self.store.jobs(),
+                'historical_target_asset_ids': [e['report_asset_id'] for e in self.store.list('example')],
+                'capabilities': {'formats': ['docx', 'xlsx', 'pdf', 'pptx'], 'learning': 'bounded_regional_policy_search', 'model': model_status(),
                     'runtime': 'trusted_regional_revenue', 'native_pivot': 'structural_verified_target_certification_pending',
                     'deployment': 'single_user_local', 'uploads': ['csv', 'xlsx', 'docx', 'pdf', 'png', 'jpg', 'jpeg'],
                     'images': {'formats': ['png', 'jpg', 'jpeg'], 'max_per_report': 1, 'frozen_png_export': True}}, 'demo': True}

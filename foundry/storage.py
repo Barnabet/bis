@@ -145,7 +145,7 @@ class Store:
             'SELECT data FROM entities WHERE kind=? ORDER BY created_at DESC,id', (kind,))]
 
     def update(self, kind, id, record, db=None):
-        if kind in {'snapshot', 'asset', 'export', 'release', 'example'}:
+        if kind in {'snapshot', 'asset', 'export', 'release', 'example', 'example_exposure', 'model_call'}:
             raise DomainError('IMMUTABLE_RECORD', f'{kind} records cannot be overwritten.', 409)
         if db is None:
             with self.transaction() as conn:

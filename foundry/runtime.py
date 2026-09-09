@@ -21,6 +21,21 @@ from .contracts import FactRun, Finding, Period, Program, Snapshot, SourceAsset
 SOURCE_COLUMNS = {"transaction_id", "date", "region", "status", "amount", "currency"}
 DISCLOSURE = "This report describes posted revenue movements. The source data does not establish the causes of those movements."
 POLICY_VERSION = "quarterly-revenue/1.0.0"
+SELECTION_OPTIONS = [
+    {"value": "largest_absolute_change", "label": "Largest absolute revenue change"},
+    {"value": "largest_percentage_change", "label": "Largest absolute percentage change"},
+    {"value": "largest_current_revenue", "label": "Largest current-period revenue"},
+]
+
+
+def validate_reporting_policy(reporting_policy=None):
+    if reporting_policy is None:
+        return {"selection": "largest_absolute_change"}
+    if (not isinstance(reporting_policy, dict) or set(reporting_policy) != {"selection"}
+            or not isinstance(reporting_policy["selection"], str)
+            or reporting_policy["selection"] not in {option["value"] for option in SELECTION_OPTIONS}):
+        _fail("REPORTING_POLICY_INVALID", "This registered adapter requires one supported selection policy.")
+    return dict(reporting_policy)
 
 
 class RuntimeBlocked(ValueError):
@@ -138,11 +153,16 @@ def _parse_rows(rows):
 
 def prepare(rows, period, source_asset, program=None, *, snapshot_id=None,
             report_type_id="quarterly-revenue", revision=1, parent_id=None,
-            created_at=None, source_snapshot_digest=None, image_asset=None, image_metadata=None) -> Snapshot:
+            created_at=None, source_snapshot_digest=None, image_asset=None, image_metadata=None,
+            reporting_policy=None) -> Snapshot:
     """Compute one report from already bound CSV rows and explicit source metadata."""
     period = Period.model_validate(period)
     source_asset = SourceAsset.model_validate(source_asset)
-    program = Program.model_validate(program) if program is not None else default_program()
+    policy = validate_reporting_policy(reporting_policy)
+    explicit_program = program is not None
+    program = Program.model_validate(program) if explicit_program else default_program()
+    if not explicit_program and policy["selection"] != "largest_absolute_change":
+        program = program.model_copy(update={"digest": canonical_digest({"adapter": program.digest, "reporting_policy": policy})})
     image_asset = SourceAsset.model_validate(image_asset) if image_asset is not None else None
     if image_metadata and image_asset is None:
         _fail('REFERENCE_INVALID', 'A report image requires its original bound source asset.')
@@ -198,13 +218,14 @@ def prepare(rows, period, source_asset, program=None, *, snapshot_id=None,
         fact("revenue.growth", growth, "Revenue change divided by comparison revenue; undefined when the denominator is zero.", comparison_scope,
              unit="ratio", inputs=["revenue.change", "revenue.comparison"], display=_percent(growth))
         regional_rows, pivot_rows = [], []
-        movements = {}
+        movements, ratios = {}, {}
         for key in keys:
             label, slug = profiles[key]
             current, comparison = aggregates["current"][key], aggregates["comparison"][key]
             movement = current - comparison
             ratio = movement / comparison if comparison else None
             movements[key] = movement
+            ratios[key] = ratio
             fact(f"region.{slug}.change", movement, f"Current minus comparison posted revenue for {label}.", comparison_scope,
                  inputs=[f"region.{slug}.current", f"region.{slug}.comparison"], display=_money(movement, True))
             fact(f"region.{slug}.growth", ratio, f"Revenue movement divided by comparison revenue for {label}; zero denominator is undefined.", comparison_scope,
@@ -212,13 +233,33 @@ def prepare(rows, period, source_asset, program=None, *, snapshot_id=None,
             regional_rows.append({"region": label, "current": _raw(current), "comparison": _raw(comparison),
                                   "change": _raw(movement), "growth": _raw(ratio) if ratio is not None else None})
             pivot_rows.extend({"region": label, "period": name, "revenue": _raw(aggregates[name][key])} for name in ("current", "comparison"))
-        driver_key = sorted(keys, key=lambda key: (-abs(movements[key]), key))[0]
+        selection = policy["selection"]
+        if selection == "largest_percentage_change":
+            ranked = [key for key in keys if ratios[key] is not None]
+            if not ranked:
+                _fail("SELECTION_UNDEFINED", "No region has a defined comparison ratio for the approved percentage selection policy.")
+            driver_key = sorted(ranked, key=lambda key: (-abs(ratios[key]), key))[0]
+            driver_definition = "Region with the largest absolute percentage revenue movement; undefined ratios are excluded and normalized region key breaks ties."
+            driver_inputs = [f"region.{profiles[key][1]}.growth" for key in keys]
+        elif selection == "largest_current_revenue":
+            driver_key = sorted(keys, key=lambda key: (-aggregates["current"][key], key))[0]
+            driver_definition = "Region with the largest current-period posted revenue; normalized region key breaks ties."
+            driver_inputs = [f"region.{profiles[key][1]}.current" for key in keys]
+        else:
+            driver_key = sorted(keys, key=lambda key: (-abs(movements[key]), key))[0]
+            driver_definition = "Region with the largest absolute revenue movement; normalized region key breaks ties."
+            driver_inputs = [f"region.{profiles[key][1]}.change" for key in keys]
         driver_label, driver_slug = profiles[driver_key]
-        fact("driver.region", driver_label, "Region with the largest absolute revenue movement; normalized region key breaks ties.", comparison_scope,
-             kind="text", unit="region", display=driver_label,
-             inputs=[f"region.{profiles[key][1]}.change" for key in keys])
+        fact("driver.region", driver_label, driver_definition, comparison_scope,
+             kind="text", unit="region", display=driver_label, inputs=driver_inputs)
         fact("driver.change", movements[driver_key], "Revenue movement of the selected driver region.", comparison_scope,
              inputs=["driver.region", f"region.{driver_slug}.change"], display=_money(movements[driver_key], True))
+        if selection == "largest_percentage_change":
+            fact("driver.growth", ratios[driver_key], "Percentage revenue movement of the selected driver region.", comparison_scope,
+                 unit="ratio", inputs=["driver.region", f"region.{driver_slug}.growth"], display=_percent(ratios[driver_key], True))
+        elif selection == "largest_current_revenue":
+            fact("driver.current", aggregates["current"][driver_key], "Current-period revenue of the selected driver region.", comparison_scope,
+                 inputs=["driver.region", f"region.{driver_slug}.current"])
 
     def text(value):
         return {"type": "text", "text": value}
@@ -231,8 +272,15 @@ def prepare(rows, period, source_asset, program=None, *, snapshot_id=None,
         summary_runs.extend([text("Relative growth is "), ref("revenue.growth"), text(" because comparison revenue is zero. ")])
     else:
         summary_runs.extend([text("Growth against the comparison period was "), ref("revenue.growth"), text(". ")])
-    summary_runs.extend([ref("driver.region"), text(" recorded the largest absolute regional movement, "), ref("driver.change"),
-                         text(", against a total change of "), ref("revenue.change"), text(".")])
+    if selection == "largest_percentage_change":
+        summary_runs.extend([ref("driver.region"), text(" recorded the largest absolute percentage revenue movement, "), ref("driver.growth"),
+                             text(", with a revenue change of "), ref("driver.change")])
+    elif selection == "largest_current_revenue":
+        summary_runs.extend([ref("driver.region"), text(" had the highest current-period regional revenue, "), ref("driver.current"),
+                             text(", with a revenue change of "), ref("driver.change")])
+    else:
+        summary_runs.extend([ref("driver.region"), text(" recorded the largest absolute regional movement, "), ref("driver.change")])
+    summary_runs.extend([text(", against a total change of "), ref("revenue.change"), text(".")])
     nodes = [
         {"id": "summary", "kind": "rich_text", "title": "Quarter in review", "runs": summary_runs, "editable": False, "mode": "computed"},
         {"id": "commentary", "kind": "rich_text", "title": "Editorial context", "runs": [text(DISCLOSURE)], "editable": True, "mode": "literal"},
@@ -304,7 +352,8 @@ def prepare(rows, period, source_asset, program=None, *, snapshot_id=None,
                 {"id": "period", "label": "Period", "type": "text", "unit": ""},
                 {"id": "revenue", "label": "Revenue", "type": "decimal", "unit": "EUR"}], "rows": pivot_rows}},
         "nodes": nodes, "views": views, "findings": findings,
-        "metadata": {"runtime": POLICY_VERSION, "authorship": "manually_authored", "normalization": "Unicode NFKC, collapsed whitespace, casefold; deterministic title case display",
+        "metadata": {"runtime": POLICY_VERSION, "authorship": "manually_authored", "reporting_policy": policy,
+                     "normalization": "Unicode NFKC, collapsed whitespace, casefold; deterministic title case display",
                      "completeness": "Assumed complete inside each nonempty posted period; not independently certified.",
                      "cutoff_semantics": "as_of identifies the bound immutable snapshot; these date-only records cannot reconstruct historical revisions.",
                      "pivot_disclosure": "Region/period revenue aggregates only; transaction identifiers are excluded.",

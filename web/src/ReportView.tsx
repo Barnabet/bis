@@ -19,6 +19,7 @@ import {
   Link2,
   LockKeyhole,
   Pencil,
+  PenLine,
   ShieldCheck,
   Table2,
   X,
@@ -348,7 +349,11 @@ function Metrics(props: Shared) {
   );
 }
 export function ReportDocument(
-  props: Shared & { onEdit: (node: ReportNode) => void },
+  props: Shared & {
+    onEdit: (node: ReportNode) => void;
+    onDraft: () => void;
+    actionsDisabled?: boolean;
+  },
 ) {
   const nodes = getNodes(props.snapshot);
   const snapshot = props.snapshot;
@@ -392,13 +397,24 @@ export function ReportDocument(
               <div className="section-title-row">
                 <h3>{node.title}</h3>
                 {node.editable ? (
-                  <button
-                    className="small-text-button"
-                    onClick={() => props.onEdit(node)}
-                  >
-                    <Pencil size={12} />
-                    Revise commentary
-                  </button>
+                  <div className="commentary-actions">
+                    <button
+                      className="small-text-button"
+                      onClick={() => props.onEdit(node)}
+                      disabled={props.actionsDisabled}
+                    >
+                      <Pencil size={12} />
+                      Revise commentary
+                    </button>
+                    <button
+                      className="small-text-button"
+                      onClick={props.onDraft}
+                      disabled={props.actionsDisabled}
+                    >
+                      <PenLine size={13} />
+                      Draft with AI
+                    </button>
+                  </div>
                 ) : (
                   <span className="subtle-label">
                     <LockKeyhole size={11} />

@@ -28,7 +28,8 @@ import type {
   ReportNode,
   Snapshot,
 } from "./types";
-import { activeProgramFor, canRunProgram } from "./types";
+import { activeProgramFor, canRunProgram, getModelStatus } from "./types";
+import { CompositionDialog } from "./CompositionDialog";
 import { api, messageOf, post } from "./api";
 import {
   AcceptDialog,
@@ -61,7 +62,7 @@ import {
 type Page = "report" | "reports" | "sources" | "programs";
 type Dialog =
   | {
-      kind: "create" | "run" | "export" | "accept" | "help";
+      kind: "create" | "run" | "export" | "accept" | "help" | "compose";
       reportTypeId?: string;
     }
   | { kind: "revision"; node: ReportNode }
@@ -106,6 +107,8 @@ export default function App() {
   const [source, setSource] = useState<Asset | null>(null);
   const [sourceLoading, setSourceLoading] = useState(false);
   const [job, setJob] = useState<Job | null>(null);
+  const [jobProgramId, setJobProgramId] = useState<string | null>(null);
+  const [focusedProgramId, setFocusedProgramId] = useState<string | null>(null);
   const [jobError, setJobError] = useState<string | null>(null);
   const [exports, setExports] = useState<ExportRecord[]>([]);
   const [toast, setToast] = useState<string | null>(null);
@@ -229,16 +232,42 @@ export default function App() {
     void refresh().catch((err) => setError(messageOf(err)));
     if (job.status === "completed") {
       const id = String(job.result?.snapshot_id ?? job.snapshot_id ?? "");
-      if (id) {
+      if (job.kind === "learning") {
+        const programId = String(job.result?.program_id ?? jobProgramId ?? "");
+        if (programId) setFocusedProgramId(programId);
+        navigate("programs");
+        notify(
+          "Learning result ready. Review hypotheses, target coverage, and policy decisions.",
+        );
+      } else if (job.kind === "composition" && id) {
+        navigate("report", id);
+        setView("document");
+        setDialog((current) => (current?.kind === "compose" ? null : current));
+        notify(
+          "AI commentary draft saved in a new revision. Review it before accepting the report.",
+        );
+      } else if (job.kind === "generation" && id) {
         navigate("report", id);
         setDialog((current) => (current?.kind === "run" ? null : current));
         notify("Report generated. Your new snapshot is ready.");
-      } else {
+      } else if (job.kind === "export") {
         if (snapshot?.id) void refreshExports(snapshot.id);
         notify("Export ready. Download it from the export dialog.");
+      } else {
+        notify(
+          "The job completed. Refresh its results to inspect the outcome.",
+        );
       }
     } else if (job.status === "cancelled") notify("Job cancelled.");
-  }, [job, navigate, notify, refresh, snapshot?.id, refreshExports]);
+  }, [
+    job,
+    jobProgramId,
+    navigate,
+    notify,
+    refresh,
+    snapshot?.id,
+    refreshExports,
+  ]);
   const closeDialog = useCallback(() => setDialog(null), []);
   const closeSource = useCallback(() => setSource(null), []);
   const beginRun = useCallback(
@@ -257,12 +286,33 @@ export default function App() {
   );
   const beginExport = () => {
     if (
+      job &&
+      ["queued", "running"].includes(job.status) &&
+      job.kind !== "export"
+    ) {
+      notify(
+        "A job is already running. Open its progress above before starting another operation.",
+      );
+      return;
+    }
+    if (
       job?.kind !== "export" ||
       !["queued", "running", "completed"].includes(job.status)
     )
       setJob(null);
     setJobError(null);
     setDialog({ kind: "export" });
+  };
+  const beginComposition = () => {
+    if (job && ["queued", "running"].includes(job.status)) {
+      notify(
+        "A job is already running. Its progress is shown at the top of the workspace.",
+      );
+      return;
+    }
+    setJob(null);
+    setJobError(null);
+    setDialog({ kind: "compose" });
   };
   const openSource = async (id: string) => {
     setSourceLoading(true);
@@ -310,6 +360,7 @@ export default function App() {
     data.programs,
   );
   const published = canRunProgram(activeProgram);
+  const modelStatus = getModelStatus(data.capabilities);
 
   return (
     <div className="app-shell">
@@ -429,7 +480,7 @@ export default function App() {
               Local workspace
               <small>
                 <i />
-                Files stay on this machine
+                Local files · optional AI
               </small>
             </div>
             <MoreHorizontal size={17} />
@@ -479,13 +530,28 @@ export default function App() {
             <span>
               {job.kind === "export"
                 ? "Preparing your export"
-                : "Preparing a report snapshot"}
+                : job.kind === "learning"
+                  ? "Learning from historical examples"
+                  : job.kind === "composition"
+                    ? "Drafting editorial commentary"
+                    : "Preparing a report snapshot"}
             </span>
             <button
               className="text-button"
-              onClick={() =>
-                setDialog({ kind: job.kind === "export" ? "export" : "run" })
-              }
+              onClick={() => {
+                if (job.kind === "learning") {
+                  if (jobProgramId) setFocusedProgramId(jobProgramId);
+                  navigate("programs");
+                } else
+                  setDialog({
+                    kind:
+                      job.kind === "export"
+                        ? "export"
+                        : job.kind === "composition"
+                          ? "compose"
+                          : "run",
+                  });
+              }}
             >
               View progress
               <ArrowRight size={13} />
@@ -532,6 +598,18 @@ export default function App() {
               programs={data.programs}
               reportTypes={data.report_types}
               onRefresh={refresh}
+              assets={data.assets}
+              model={modelStatus}
+              job={job}
+              jobProgramId={jobProgramId}
+              focusedProgramId={focusedProgramId}
+              onJob={(nextJob, programId) => {
+                setJob(nextJob);
+                setJobProgramId(programId);
+                setFocusedProgramId(programId);
+              }}
+              onCancelJob={() => void cancelJob()}
+              onSource={(id) => void openSource(id)}
             />
           ) : (
             <>
@@ -570,7 +648,9 @@ export default function App() {
                         <button
                           className="button secondary accept-button"
                           onClick={() => setDialog({ kind: "accept" })}
-                          disabled={snapshot.status === "blocked"}
+                          disabled={
+                            snapshot.status === "blocked" || Boolean(activeJob)
+                          }
                         >
                           <ShieldCheck size={15} />
                           Accept report
@@ -679,6 +759,8 @@ export default function App() {
                           onEdit={(node) =>
                             setDialog({ kind: "revision", node })
                           }
+                          onDraft={beginComposition}
+                          actionsDisabled={Boolean(activeJob)}
                         />
                       ) : view === "workbook" ? (
                         <WorkbookView {...shared} />
@@ -746,8 +828,9 @@ export default function App() {
       {dialog?.kind === "create" && (
         <CreateTypeDialog
           onClose={closeDialog}
-          onCreated={async () => {
+          onCreated={async (programId) => {
             await refresh();
+            setFocusedProgramId(programId);
             navigate("programs");
             notify("Report type created. Review its candidate program.");
           }}
@@ -758,7 +841,7 @@ export default function App() {
           data={data}
           snapshot={snapshot}
           reportTypeId={dialog.reportTypeId}
-          job={job?.kind === "export" ? null : job}
+          job={job?.kind === "generation" ? job : null}
           onJob={setJob}
           onCancel={() => void cancelJob()}
           onClose={closeDialog}
@@ -770,6 +853,17 @@ export default function App() {
           node={dialog.node}
           onClose={closeDialog}
           onSaved={saveSnapshot}
+        />
+      )}
+      {dialog?.kind === "compose" && snapshot && (
+        <CompositionDialog
+          data={data}
+          model={modelStatus}
+          snapshot={snapshot}
+          job={job?.kind === "composition" ? job : null}
+          onJob={setJob}
+          onCancel={() => void cancelJob()}
+          onClose={closeDialog}
         />
       )}
       {dialog?.kind === "accept" && snapshot && (
@@ -827,9 +921,10 @@ export default function App() {
               </div>
             </div>
             <div className="notice info">
-              The included example is synthetic. This local edition uses a
-              bounded, authored revenue program; it does not claim automated
-              policy learning or production isolation.
+              The included example is synthetic. Historical-example learning
+              compares the supported revenue policies. AI assistance uses the
+              configured provider and retains human review. This local edition
+              does not claim arbitrary report learning or production isolation.
             </div>
           </div>
           <footer className="modal-footer">
