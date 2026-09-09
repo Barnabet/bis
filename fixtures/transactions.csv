@@ -1,0 +1,13 @@
+transaction_id,date,region,status,amount,currency
+TX-2025-N-01,2025-01-08,North,posted,250.00,EUR
+TX-2025-N-02,2025-03-25,North,posted,150.00,EUR
+TX-2025-S-01,2025-02-10,South,posted,300.00,EUR
+TX-2025-E-01,2025-03-12,East,posted,150.00,EUR
+TX-2025-W-01,2025-03-31,West,posted,150.00,EUR
+TX-2026-N-01,2026-01-05,North,posted,300.00,EUR
+TX-2026-N-02,2026-03-20,North,posted,200.00,EUR
+TX-2026-S-01,2026-02-10,South,posted,350.00,EUR
+TX-2026-E-01,2026-03-12,East,posted,150.00,EUR
+TX-2026-W-01,2026-03-31,West,posted,200.00,EUR
+TX-2026-CANCELLED,2026-02-18,North,cancelled,900.00,EUR
+TX-2026-APRIL,2026-04-01,East,posted,777.00,EUR

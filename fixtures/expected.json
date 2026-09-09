@@ -1,0 +1,22 @@
+{
+  "fixture_kind": "synthetic_independent_observations",
+  "limitations": "Visible regression fixture, not a reserved evaluation or evidence of automatic learning.",
+  "current": "1200.00",
+  "comparison": "1000.00",
+  "change": "200.00",
+  "growth": "0.2",
+  "growth_display": "20.0%",
+  "driver": "North",
+  "driver_change": "100.00",
+  "region_order": ["East", "North", "South", "West"],
+  "regions": {
+    "East": {"current": "150.00", "comparison": "150.00", "change": "0.00"},
+    "North": {"current": "500.00", "comparison": "400.00", "change": "100.00"},
+    "South": {"current": "350.00", "comparison": "300.00", "change": "50.00"},
+    "West": {"current": "200.00", "comparison": "150.00", "change": "50.00"}
+  },
+  "source_rows": 12,
+  "current_rows": 5,
+  "comparison_rows": 5,
+  "excluded_rows": 2
+}

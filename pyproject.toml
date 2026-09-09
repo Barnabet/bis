@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "report-foundry"
+version = "0.1.0"
+description = "A local native reporting workbench with immutable evidence and independent exports"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1", "uvicorn>=0.34,<1", "pydantic>=2.10,<3",
+  "python-multipart>=0.0.20,<1", "python-docx>=1.1,<2",
+  "XlsxWriter>=3.2,<4", "python-pptx>=1.0,<2", "reportlab>=4.3,<5",
+  "Pillow>=11,<13", "openpyxl>=3.1,<4", "pypdf>=5,<7", "tzdata>=2025.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "httpx>=0.28,<1"]
+
+[project.scripts]
+foundry = "foundry.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["foundry"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
