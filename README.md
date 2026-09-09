@@ -27,7 +27,7 @@ For frontend development, run `npm --prefix web run dev` alongside the API. Vite
 - Source upload and inspection for CSV, XLSX, DOCX and text-bearing PDF. Original bytes are content-addressed and integrity-checked. Only an unambiguous, value-only CSV/XLSX transaction source can feed this revenue program.
 - Explicit current/comparison intervals, timezone and data cutoff. Exact decimal arithmetic, deterministic driver selection, missing-period blocking, distinct missing/zero states, row-level source references and fact dependency checks.
 - A native report with fact-linked prose, a typed regional table, a chart, a pivot definition and flow/grid/canvas presentations. Click facts to inspect their definitions and origins.
-- Candidate policy decisions, independent synthetic regression evaluation, compare-and-swap publication, frozen source-code packages, and a pinned release for each run.
+- Candidate versions within the same report type, policy decisions, independent synthetic regression evaluation, compare-and-swap publication, frozen source-code packages, and a pinned release for each run. The active release remains selected while its replacement is reviewed.
 - Editable commentary creates a new immutable revision. Computed facts and prose are locked. Review acceptance creates an audited revision; it preserves earlier warnings and review findings in the acceptance history.
 - Persisted jobs with idempotency conflict detection, worker leases, heartbeats, stale-result fencing and cancellation. The deterministic local jobs restart safely as a unit after a crash; stages record progress, not invented percentages.
 - Four actual export adapters with per-component coverage and fidelity manifests. Exporting does not call source discovery, preparation or language generation.
@@ -73,16 +73,30 @@ uv run foundry export SNAPSHOT_ID docx --key word-export-1 --output output/repor
 uv run foundry worker
 ```
 
-A period JSON example is available in the runtime's `default_period()` and the native contract documentation. `foundry status` returns the persisted catalog. Reusing a request key with different inputs returns a conflict. Published runtime code drift blocks a new run; existing frozen snapshots remain exportable. Each release retains its source-code package and dependency lock for restoration.
+A period JSON example is available in the runtime's `default_period()` and the native contract documentation. `foundry status` returns the persisted catalog. Reusing a request key with different inputs returns a conflict. Retrying the same request after publication returns its original job and pinned program; a new request uses the active release.
 
-After changing the backend, restore the archived release code or create and evaluate a new report type. Candidate versioning within an existing report type is not implemented yet. To try updated code with a fresh synthetic demo while preserving the earlier installation:
+## Upgrade a reporting program
+
+After installing backend changes, restart the server before creating or evaluating a candidate. A running process whose code files changed reports `restart_required`; a published program that differs from the installed runtime reports `code_changed`. Existing snapshots and export artifacts retain their original identities. Archived source-code packages and dependency locks provide audit and restoration evidence; the application does not execute archived runtimes automatically.
+
+In the workbench, create a new candidate from the active program, review its changes and policy decisions, evaluate it, and publish it. The report type, source assets and historical reports stay in place. Creating a candidate captures the installed code and preserves the old policy answers as context; new decisions, evaluation and release approval are required. The old release remains active until publication, although code drift can prevent new runs against it.
+
+The equivalent CLI workflow uses the new candidate ID returned by the first command:
 
 ```sh
-uv run foundry --data-dir .foundry-new seed-demo
-uv run foundry --data-dir .foundry-new serve
+uv run foundry create-candidate ACTIVE_PROGRAM_ID --reason 'Update the installed revenue runtime'
+uv run foundry resolve CANDIDATE_ID selection largest_absolute_change
+uv run foundry resolve CANDIDATE_ID completeness assumed_complete
+uv run foundry resolve CANDIDATE_ID template compatible_reviewed
+uv run foundry evaluate CANDIDATE_ID
+uv run foundry publish CANDIDATE_ID
 ```
 
-Stop the existing server before starting another on the same port. Running `seed-demo` again in the original data directory does not upgrade its published program.
+Only one candidate can be open per report type. Retrying creation from the same base with the same reason returns that candidate. To abandon a replacement candidate, use `uv run foundry discard-candidate CANDIDATE_ID --reason 'Defer this update'`; discarding retains its history and leaves the active release unchanged. The initial candidate must be retained until its report type has a published release. Automatically assigned version numbers account for discarded candidates and are not reused. Published versions offer a source-package download in the workbench.
+
+Publication checks both the evaluated candidate digest and its expected active release. It cannot overwrite a newer release. In-flight jobs keep their original program pin and never silently switch to the replacement. They may block if that pinned runtime is no longer installed.
+
+Running `seed-demo` again preserves the existing demo; use the candidate workflow to upgrade its program. A separate `--data-dir` remains available for independent installations.
 
 ## Validation
 

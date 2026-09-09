@@ -2,25 +2,20 @@ import { useRef, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
-  Check,
-  CheckCircle2,
   ChevronRight,
   Clock3,
-  Database,
   FileSpreadsheet,
   FileText,
   Fingerprint,
   FolderOpen,
   GitBranch,
-  Play,
   Plus,
   Search,
-  ShieldCheck,
   Upload,
-  XCircle,
 } from "lucide-react";
-import type { Asset, Bootstrap, Program, SnapshotSummary } from "./types";
-import { api, messageOf, post } from "./api";
+import type { Asset, Bootstrap, SnapshotSummary } from "./types";
+import { activeProgramFor, canRunProgram } from "./types";
+import { api, messageOf } from "./api";
 import {
   Badge,
   EmptyState,
@@ -231,8 +226,9 @@ export function ReportsPage({
       </div>
       <div className="type-list">
         {data.report_types.map((type) => {
-          const program = data.programs.find(
-            (p) => p.report_type_id === type.id,
+          const program = activeProgramFor(type, data.programs);
+          const candidate = data.programs.find(
+            (p) => p.report_type_id === type.id && p.state === "candidate",
           );
           return (
             <div className="type-row" key={type.id}>
@@ -245,11 +241,25 @@ export function ReportsPage({
                   {type.description || "Regional revenue reporting program"}
                 </p>
               </div>
-              <Badge status={program?.state ?? "candidate"} />
+              <Badge status={program ? "published" : "candidate"}>
+                {program
+                  ? `Active · v${program.version}`
+                  : "Awaiting publication"}
+              </Badge>
+              {candidate && program && (
+                <span className="muted-small">Update in review</span>
+              )}
               <button
                 className="button secondary small"
                 onClick={() => onRun(type.id)}
-                disabled={program?.state !== "published"}
+                disabled={!canRunProgram(program)}
+                title={
+                  program?.runtime_status === "code_changed"
+                    ? "The active release needs a program update. Open Programs to review it."
+                    : program?.runtime_status === "restart_required"
+                      ? "Restart the local service before creating a new run."
+                      : undefined
+                }
               >
                 New run
                 <ArrowRight size={14} />
@@ -526,310 +536,4 @@ export function SourceDetail({
     </Modal>
   );
 }
-export function ProgramsPage({
-  programs,
-  onRefresh,
-}: {
-  programs: Program[];
-  onRefresh: () => Promise<void>;
-}) {
-  const [selected, setSelected] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [decisions, setDecisions] = useState<Record<string, string>>({});
-  const program = programs.find((p) => p.id === selected) ?? programs[0];
-  async function act(action: string, extra: Record<string, unknown> = {}) {
-    if (!program) return;
-    setBusy(action);
-    setError(null);
-    try {
-      await post(`/programs/${program.id}/${action}`, {
-        expected_digest: program.digest,
-        ...extra,
-      });
-      await onRefresh();
-    } catch (err) {
-      setError(messageOf(err));
-    } finally {
-      setBusy(null);
-    }
-  }
-  return (
-    <div className="library-page programs-page">
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">REPEATABLE BY DESIGN</span>
-          <h1>Programs</h1>
-          <p>
-            The policy behind your reports, with visible checks and decisions.
-          </p>
-        </div>
-      </div>
-      {programs.length === 0 ? (
-        <EmptyState
-          icon={<GitBranch size={28} />}
-          title="No programs yet"
-          text="Create a report type to begin with a candidate reporting program."
-        />
-      ) : (
-        <>
-          <div
-            className="program-selector"
-            role="tablist"
-            aria-label="Reporting programs"
-          >
-            {programs.map((p) => (
-              <button
-                role="tab"
-                aria-selected={program?.id === p.id}
-                className={program?.id === p.id ? "active" : ""}
-                key={p.id}
-                onClick={() => {
-                  setSelected(p.id);
-                  setError(null);
-                }}
-              >
-                <GitBranch size={15} />
-                {p.name ?? "Revenue program"}
-                <Badge status={p.state} />
-              </button>
-            ))}
-          </div>
-          {error && <ErrorNotice message={error} />}
-          {program && (
-            <>
-              <div className="program-banner">
-                <div>
-                  <span className="eyebrow">
-                    REPORTING PROGRAM · V{program.version}
-                  </span>
-                  <h2>{program.name}</h2>
-                  <p>
-                    {program.state === "published"
-                      ? "Published policy is frozen. Every run records this exact version."
-                      : "Resolve policy decisions, evaluate the candidate, then publish."}
-                  </p>
-                </div>
-                <div className="program-actions">
-                  <button
-                    className="button secondary"
-                    disabled={Boolean(busy)}
-                    onClick={() => void act("evaluate")}
-                  >
-                    {busy === "evaluate" ? (
-                      <Spinner label="Evaluating…" />
-                    ) : (
-                      <>
-                        <Play size={14} />
-                        Run evaluation
-                      </>
-                    )}
-                  </button>
-                  {program.state !== "published" && (
-                    <button
-                      className="button primary"
-                      disabled={
-                        Boolean(busy) ||
-                        !program.evaluation?.passed ||
-                        program.decisions.some((d) => !d.resolution)
-                      }
-                      onClick={() => void act("publish")}
-                    >
-                      {busy === "publish" ? (
-                        <Spinner label="Publishing…" />
-                      ) : (
-                        <>
-                          <ShieldCheck size={15} />
-                          Publish program
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="program-grid">
-                <section className="program-section">
-                  <div className="section-heading">
-                    <h2>Coverage ledger</h2>
-                    <span className="muted-small">
-                      {
-                        program.coverage.filter((c) => c.status === "verified")
-                          .length
-                      }{" "}
-                      / {program.coverage.length} verified
-                    </span>
-                  </div>
-                  <div className="coverage-list">
-                    {program.coverage.map((component) => (
-                      <div key={component.id}>
-                        <span className={`coverage-icon ${component.status}`}>
-                          {component.status === "verified" ? (
-                            <Check size={14} />
-                          ) : (
-                            <Clock3 size={14} />
-                          )}
-                        </span>
-                        <span>
-                          <strong>{component.label}</strong>
-                          <small>{component.kind.replaceAll("_", " ")}</small>
-                        </span>
-                        <Badge status={component.status} />
-                      </div>
-                    ))}
-                  </div>
-                </section>
-                <section className="program-section">
-                  <div className="section-heading">
-                    <h2>Independent evaluation</h2>
-                    {program.evaluation && (
-                      <Badge
-                        status={
-                          program.evaluation.passed ? "verified" : "blocked"
-                        }
-                      >
-                        {program.evaluation.passed ? "Passed" : "Needs repair"}
-                      </Badge>
-                    )}
-                  </div>
-                  {program.evaluation ? (
-                    <>
-                      <p className="muted-small">
-                        Recorded {shortDate(program.evaluation.created_at)}{" "}
-                        against this program digest.
-                      </p>
-                      <div className="evaluation-list">
-                        {program.evaluation.checks.map((check, i) => (
-                          <div key={i}>
-                            {check.passed ? (
-                              <CheckCircle2 size={17} />
-                            ) : (
-                              <XCircle size={17} />
-                            )}
-                            <span>
-                              <strong>{check.name}</strong>
-                              <small>{check.detail}</small>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="evaluation-empty">
-                      <ShieldCheck size={28} strokeWidth={1.4} />
-                      <h3>Ready to be checked</h3>
-                      <p>
-                        Evaluation records whether this candidate satisfies the
-                        independent fixture checks.
-                      </p>
-                    </div>
-                  )}
-                </section>
-              </div>
-              <section className="program-section decisions-section">
-                <div className="section-heading">
-                  <h2>Policy decisions</h2>
-                  <span className="muted-small">
-                    Versioned, explicit choices
-                  </span>
-                </div>
-                {program.decisions.length ? (
-                  program.decisions.map((decision) => (
-                    <div className="decision" key={decision.id}>
-                      <div className="decision-heading">
-                        <h3>{decision.question}</h3>
-                        <Badge
-                          status={
-                            decision.resolution ? "accepted" : "needs_decision"
-                          }
-                        >
-                          {decision.resolution ? "Resolved" : "Needs decision"}
-                        </Badge>
-                      </div>
-                      <div className="decision-alternatives">
-                        {decision.alternatives.map((option) => (
-                          <label
-                            key={option.value}
-                            className={
-                              (decisions[decision.id] ??
-                                decision.resolution) === option.value
-                                ? "selected"
-                                : ""
-                            }
-                          >
-                            <input
-                              type="radio"
-                              name={decision.id}
-                              value={option.value}
-                              checked={
-                                (decisions[decision.id] ??
-                                  decision.resolution) === option.value
-                              }
-                              disabled={program.state === "published"}
-                              onChange={() =>
-                                setDecisions((d) => ({
-                                  ...d,
-                                  [decision.id]: option.value,
-                                }))
-                              }
-                            />
-                            <span>
-                              <strong>{option.label}</strong>
-                              <small>{option.consequence}</small>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                      {program.state !== "published" && (
-                        <button
-                          className="button secondary small"
-                          disabled={
-                            Boolean(busy) ||
-                            !decisions[decision.id] ||
-                            decisions[decision.id] === decision.resolution
-                          }
-                          onClick={() =>
-                            void act("decisions", {
-                              decision_id: decision.id,
-                              resolution: decisions[decision.id],
-                            })
-                          }
-                        >
-                          Record decision
-                          <ArrowRight size={14} />
-                        </button>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="muted-small">
-                    No unresolved policy choices are recorded for this program.
-                  </p>
-                )}
-              </section>
-              <section className="program-section">
-                <h2>Declared scope</h2>
-                <ul className="limitations">
-                  {program.limitations.map((limitation, i) => (
-                    <li key={i}>{limitation}</li>
-                  ))}
-                </ul>
-                <details className="technical-details">
-                  <summary>
-                    <Database size={14} />
-                    Input contract and package identity
-                  </summary>
-                  <pre>{pretty(program.input_contract)}</pre>
-                  <dl>
-                    <KeyValue label="Program digest" mono>
-                      {program.digest}
-                    </KeyValue>
-                  </dl>
-                </details>
-              </section>
-            </>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
+export { ProgramsPage } from "./ProgramsPage";

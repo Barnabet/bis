@@ -14,8 +14,17 @@ The built-in regional revenue package and fixtures are manually authored synthet
 - SQLite with WAL and transactional job leasing for a single-user local installation. Content-addressed immutable files live outside the relational records. PostgreSQL/object storage and hardened tenant isolation remain deployment work.
 - React/TypeScript native workbench served by the same local API after a production build.
 - Published program digests cover the registered runtime, contracts, export code, dependency lock, policy and decisions. Runs pin this version. Code drift blocks future execution of that release instead of silently substituting a newer runtime.
+- Existing report types can create and discard replacement candidates. One candidate is open at a time; automatically allocated versions include discarded history. Publication compares the evaluated candidate digest and its expected active release before atomically updating the active pointer.
 - Exports only read a frozen snapshot. They cannot bind sources, recompute business facts, compose prose, or modify a snapshot.
 - Presentation and editability capabilities are reported separately. A native pivot is structurally verified; certification in a target Office application is a separate gate. A compatible export may disclose pending certification; strict export blocks it.
+
+## Program upgrades
+
+A candidate starts from a published base and captures the installed code identity. It retains prior policy answers as review context but resets current decisions, evaluation and publication approval. The active release is independent of this draft. Creation retries with the same base and reason reuse the open candidate; discarding a candidate records the reason without deleting history or changing the active pointer.
+
+Publication does not rewrite older release records, package artifacts, report snapshots or exports. Read models derive `active` and `historical` status from the report type's active pointer; stored publication evidence remains intact. An existing run request keeps its first resolved release even after a newer release becomes active.
+
+Runtime identity distinguishes a process that must restart after on-disk changes from a published program whose registered code differs from the installed runtime. A restart loads the new host code; a newly evaluated candidate adopts it for future reports. Archived source-code packages and locks remain restoration evidence, not an automatically executable version store. Jobs pinned to incompatible historical code fail explicitly, and a draft update does not silently repair them.
 
 ## Trust boundary
 

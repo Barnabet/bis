@@ -1,5 +1,6 @@
 export type Run =
-  { type: "text"; text: string } | { type: "fact"; fact_id: string };
+  | { type: "text"; text: string }
+  | { type: "fact"; fact_id: string };
 export type Fact = {
   id: string;
   kind: string;
@@ -98,6 +99,7 @@ export type ReportType = {
   name: string;
   description?: string;
   program_id?: string;
+  active_program_id?: string | null;
   created_at?: string;
 };
 export type Asset = {
@@ -122,6 +124,23 @@ export type Program = {
   version: string;
   digest: string;
   state: string;
+  runtime_status?: "current" | "code_changed" | "restart_required";
+  lifecycle_status?: "active" | "historical" | "candidate" | "discarded";
+  active_program_id?: string | null;
+  lineage?: {
+    parent_program_id: string;
+    parent_program_digest: string;
+    reason: string;
+  } | null;
+  package_artifact_digest?: string | null;
+  change_summary?: {
+    added_files: string[];
+    changed_files: string[];
+    removed_files: string[];
+    python_changed: boolean;
+    policy_changed: boolean;
+    decision_review_required: boolean;
+  } | null;
   description?: string;
   coverage: { id: string; label: string; kind: string; status: string }[];
   decisions: {
@@ -129,6 +148,12 @@ export type Program = {
     question: string;
     alternatives: { value: string; label: string; consequence: string }[];
     resolution: string | null;
+    prior_resolution?: string | null;
+    inherited_from?: {
+      program_id: string;
+      program_digest: string;
+      resolved_at?: string;
+    } | null;
   }[];
   evaluation: null | {
     passed: boolean;
@@ -176,3 +201,28 @@ export const getNodes = (snapshot: Snapshot) =>
   Array.isArray(snapshot.nodes)
     ? snapshot.nodes
     : Object.values(snapshot.nodes);
+
+export const activeProgramFor = (
+  reportType: ReportType | undefined,
+  programs: Program[],
+) =>
+  reportType?.active_program_id
+    ? programs.find((program) => program.id === reportType.active_program_id)
+    : undefined;
+
+export const canRunProgram = (program: Program | undefined) =>
+  program?.state === "published" &&
+  (!program.runtime_status || program.runtime_status === "current");
+
+export const programLifecycle = (
+  program: Program,
+  reportTypes: ReportType[],
+) => {
+  if (program.lifecycle_status) return program.lifecycle_status;
+  if (program.state === "candidate" || program.state === "discarded")
+    return program.state;
+  const activeId =
+    reportTypes.find((type) => type.id === program.report_type_id)
+      ?.active_program_id ?? program.active_program_id;
+  return activeId === program.id ? "active" : "historical";
+};

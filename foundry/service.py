@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 from pathlib import Path
 import platform
+import re
 import tempfile
 from .storage import Store, digest, canonical, now, uid
 from .errors import DomainError
@@ -28,7 +29,16 @@ def code_identity():
 
 
 def program_digest(program):
-    return digest({k: program[k] for k in ('code_identity', 'policy', 'decisions', 'input_contract', 'version')})
+    fields = {k: program[k] for k in ('code_identity', 'policy', 'decisions', 'input_contract', 'version')}
+    # Preserve the identities of releases created before lineage was introduced.
+    if 'lineage' in program:
+        fields['lineage'] = program['lineage']
+    return digest(fields)
+
+
+# Disk hashes alone cannot describe modules already imported by a running worker.
+# A restart is required before newly installed code can be evaluated or executed.
+PROCESS_CODE_IDENTITY = code_identity()
 
 
 def snapshot_dict(model):
@@ -50,6 +60,19 @@ class Service:
     def __init__(self, store: Store):
         self.store = store
 
+    def _installed_code_identity(self):
+        installed = code_identity()
+        if installed != PROCESS_CODE_IDENTITY:
+            raise DomainError('RUNTIME_RESTART_REQUIRED',
+                              'Backend files changed while this process was running. Restart the server or worker before continuing.', 409)
+        return installed
+
+    @staticmethod
+    def _reason(reason):
+        if not isinstance(reason, str) or not 1 <= len(reason.strip()) <= 1000:
+            raise DomainError('REASON_REQUIRED', 'Provide a reason between 1 and 1000 characters.')
+        return reason.strip()
+
     def upload(self, data, filename, demo=False):
         inspected = inspect_asset(data, filename)
         sha = self.store.put_blob(data)
@@ -64,7 +87,7 @@ class Service:
                        'created_at': now(), 'demo': demo}
         program = {
             'id': program_id, 'report_type_id': type_id, 'name': f'{name} reporting program', 'version': '1.0.0',
-            'state': 'candidate', 'created_at': now(), 'demo': demo, 'code_identity': code_identity(),
+            'state': 'candidate', 'created_at': now(), 'demo': demo, 'code_identity': self._installed_code_identity(),
             'authoring_mode': 'manually_authored_reference',
             'policy': {'adapter': 'quarterly-revenue-v1', 'selection': 'largest_absolute_change',
                        'tie_break': 'normalized_region_key', 'currency': 'EUR', 'missing_region': 'zero_within_nonempty_period',
@@ -101,12 +124,79 @@ class Service:
             self.store.audit(type_id, 'report_type_created', {'program_id': program_id}, db)
         return {'report_type': report_type, 'program': program}
 
+    def create_candidate(self, id, expected_digest, reason):
+        reason = self._reason(reason)
+        installed = self._installed_code_identity()
+        with self.store.transaction() as db:
+            parent = self.store.get('program', id, db)
+            if parent['state'] != 'published':
+                raise DomainError('PROGRAM_UNPUBLISHED', 'Create an update from the active published release.', 409)
+            if parent['digest'] != expected_digest:
+                raise DomainError('VERSION_CONFLICT', 'The base release differs from the version you reviewed.', 409)
+            report_type = self.store.get('report_type', parent['report_type_id'], db)
+            if report_type['active_program_id'] != id:
+                raise DomainError('ACTIVE_RELEASE_CHANGED', 'This release is no longer active. Open the active release to create an update.', 409)
+            # Copy the immutable release rather than an incidental UI representation.
+            parent = self.store.get('release', id, db)
+            if parent['digest'] != expected_digest or program_digest(parent) != expected_digest:
+                raise DomainError('PROGRAM_INTEGRITY', 'The frozen base release does not match its recorded identity.', 409)
+            versions = [p for p in self.store.list('program', db) if p['report_type_id'] == report_type['id']]
+            existing = next((p for p in versions if p['state'] == 'candidate'), None)
+            if existing:
+                lineage = existing.get('lineage', {})
+                if (lineage.get('parent_program_id') == id and
+                        lineage.get('parent_program_digest') == expected_digest and lineage.get('reason') == reason):
+                    return existing
+                raise DomainError('CANDIDATE_EXISTS', 'This report type already has an open update. Open or discard it before creating another.',
+                                  409, {'candidate_id': existing['id']})
+            numbers = []
+            for p in versions:
+                if not re.fullmatch(r'\d+\.\d+\.\d+', p['version']):
+                    raise DomainError('VERSION_INVALID', 'An existing program has an unsupported version.', 409)
+                numbers.append(tuple(int(part) for part in p['version'].split('.')))
+            major, minor, _ = max(numbers)
+            candidate = copy.deepcopy(parent)
+            for field in ('published_at', 'approval', 'package_artifact_digest', 'discard'):
+                candidate.pop(field, None)
+            candidate.update(id=uid('program'), version=f'{major}.{minor + 1}.0', state='candidate',
+                             created_at=now(), code_identity=installed, evaluation=None,
+                             lineage={'parent_program_id': id, 'parent_program_digest': expected_digest, 'reason': reason})
+            for decision in candidate['decisions']:
+                decision['prior_resolution'] = decision['resolution']
+                decision['inherited_from'] = {'program_id': id, 'program_digest': expected_digest,
+                                              'resolved_at': decision.get('resolved_at')}
+                decision['resolution'] = None
+                decision.pop('resolved_at', None)
+                decision.pop('actor', None)
+            for component in candidate['coverage']:
+                component['status'] = 'implemented'
+            candidate['digest'] = program_digest(candidate)
+            self.store.insert('program', candidate, db)
+            self.store.audit(candidate['id'], 'candidate_created', {'lineage': candidate['lineage'], 'version': candidate['version'],
+                                                                  'actor': 'local_user'}, db)
+            self.store.audit(report_type['id'], 'program_update_created', {'program_id': candidate['id'], 'parent_program_id': id}, db)
+        return candidate
+
+    def discard_candidate(self, id, expected_digest, reason):
+        reason = self._reason(reason)
+        with self.store.transaction() as db:
+            program = self._candidate(id, expected_digest, db)
+            if not program.get('lineage', {}).get('parent_program_id'):
+                raise DomainError('INITIAL_CANDIDATE_REQUIRED', 'This report type needs its first candidate. Resolve or refresh it before publication.', 409)
+            program['state'] = 'discarded'
+            program['discard'] = {'reason': reason, 'actor': 'local_user', 'at': now()}
+            self.store.update('program', id, program, db)
+            self.store.audit(id, 'candidate_discarded', program['discard'], db)
+        return program
+
     def _candidate(self, id, expected_digest, db):
         program = self.store.get('program', id, db)
         if program['state'] != 'candidate':
-            raise DomainError('PROGRAM_IMMUTABLE', 'Published programs are frozen; create a new candidate.', 409)
+            raise DomainError('PROGRAM_IMMUTABLE', 'Only open candidates can be changed. Published and discarded versions are retained.', 409)
         if program['digest'] != expected_digest:
             raise DomainError('VERSION_CONFLICT', 'This candidate changed. Refresh before continuing.', 409)
+        if program_digest(program) != program['digest']:
+            raise DomainError('PROGRAM_INTEGRITY', 'Candidate content does not match its recorded identity.', 409)
         return program
 
     def resolve(self, id, decision_id, resolution, expected_digest):
@@ -119,26 +209,35 @@ class Service:
             decision['resolved_at'] = now()
             decision['actor'] = 'local_user'
             program['evaluation'] = None
+            for component in program['coverage']:
+                component['status'] = 'implemented'
             program['digest'] = program_digest(program)
             self.store.update('program', id, program, db)
             self.store.audit(id, 'policy_resolved', {'decision_id': decision_id, 'resolution': resolution}, db)
         return program
 
     def evaluate(self, id, expected_digest):
-        program = self.store.get('program', id)
-        if program['digest'] != expected_digest:
-            raise DomainError('VERSION_CONFLICT', 'The candidate changed before evaluation.', 409)
-        if program['code_identity'] != code_identity():
-            if program['state'] == 'candidate':
-                # Refresh registered code only as a new candidate digest; caller must review it.
-                with self.store.transaction() as db:
-                    p = self._candidate(id, expected_digest, db)
-                    p['code_identity'] = code_identity()
-                    p['evaluation'] = None
-                    p['digest'] = program_digest(p)
-                    self.store.update('program', id, p, db)
-                raise DomainError('CODE_CHANGED', 'Registered code changed; candidate refreshed. Review and run evaluation again.', 409)
-            raise DomainError('CODE_CHANGED', 'The published runtime no longer matches installed code.', 409)
+        installed = self._installed_code_identity()
+        with self.store.transaction() as db:
+            program = self._candidate(id, expected_digest, db)
+        if program['code_identity'] != installed:
+            # Never carry an old evaluation or approvals across installed code changes.
+            with self.store.transaction() as db:
+                p = self._candidate(id, expected_digest, db)
+                p['code_identity'] = installed
+                p['evaluation'] = None
+                for component in p['coverage']:
+                    component['status'] = 'implemented'
+                for decision in p['decisions']:
+                    if decision['resolution']:
+                        decision['prior_resolution'] = decision['resolution']
+                    decision['resolution'] = None
+                    decision.pop('resolved_at', None)
+                    decision.pop('actor', None)
+                p['digest'] = program_digest(p)
+                self.store.update('program', id, p, db)
+                self.store.audit(id, 'candidate_code_refreshed', {'previous_digest': expected_digest, 'digest': p['digest']}, db)
+            raise DomainError('CODE_CHANGED', 'Installed code changed. The candidate was refreshed; review its policy decisions and evaluate again.', 409)
         from .runtime import prepare, default_period
         from .contracts import Snapshot
         fixture = (ROOT / 'fixtures' / 'transactions.csv').read_bytes()
@@ -171,6 +270,7 @@ class Service:
         evaluation = {'digest': expected_digest, 'passed': all(c['passed'] for c in checks), 'checks': checks,
                       'created_at': now(), 'corpus': 'synthetic_development', 'holdout_count': 0}
         with self.store.transaction() as db:
+            self._installed_code_identity()
             current = self._candidate(id, expected_digest, db)
             current['evaluation'] = evaluation
             for c in current['coverage']:
@@ -182,8 +282,16 @@ class Service:
     def publish(self, id, expected_digest, actor='local_user'):
         with self.store.transaction() as db:
             program = self._candidate(id, expected_digest, db)
-            if program['code_identity'] != code_identity():
+            if program['code_identity'] != self._installed_code_identity():
                 raise DomainError('CODE_CHANGED', 'Code changed after evaluation. Evaluate a new candidate digest.', 409)
+            rt = self.store.get('report_type', program['report_type_id'], db)
+            parent_id = program.get('lineage', {}).get('parent_program_id')
+            if rt['active_program_id'] != parent_id:
+                raise DomainError('ACTIVE_RELEASE_CHANGED', 'The active release changed after this candidate was created. Create an update from the active release.', 409)
+            if parent_id:
+                parent = self.store.get('release', parent_id, db)
+                if parent['digest'] != program['lineage']['parent_program_digest']:
+                    raise DomainError('PROGRAM_INTEGRITY', 'The candidate base no longer matches its frozen release.', 409)
             missing = [d['id'] for d in program['decisions'] if not d['resolution']]
             if missing:
                 raise DomainError('POLICY_UNRESOLVED', 'Resolve the reporting policy decisions before publication.', 409, missing)
@@ -199,17 +307,21 @@ class Service:
                     raise DomainError('CODE_CHANGED', 'A package file changed during publication.', 409)
                 package_files[name] = content.decode('utf-8')
             package = {'schema_version': '1.0', 'program_digest': expected_digest, 'files': package_files,
+                       'program_version': program['version'], 'code_identity': program['code_identity'],
+                       'input_contract': program['input_contract'], 'lineage': program.get('lineage'),
                        'policy': program['policy'], 'decisions': program['decisions']}
+            self._installed_code_identity()
             program['package_artifact_digest'] = self.store.put_blob(canonical(package))
             program['state'] = 'published'
             program['published_at'] = now()
             program['approval'] = {'actor': actor, 'at': now(), 'digest': expected_digest, 'profile': 'compatible_provisional'}
             self.store.insert('release', copy.deepcopy(program), db)
             self.store.update('program', id, program, db)
-            rt = self.store.get('report_type', program['report_type_id'], db)
             rt['active_program_id'] = id
             self.store.update('report_type', rt['id'], rt, db)
             self.store.audit(id, 'published', program['approval'], db)
+            self.store.audit(rt['id'], 'active_release_changed', {'previous_program_id': parent_id, 'program_id': id,
+                                                                 'digest': expected_digest, 'actor': actor}, db)
         return program
 
     def request_run(self, report_type_id, asset_id, period, idempotency_key):
@@ -295,7 +407,7 @@ class Service:
         payload = job['payload']
         stage('Resolving frozen program')
         program = self.store.get('release', payload['program_id'])
-        if program['digest'] != payload['program_digest'] or program['code_identity'] != code_identity():
+        if program['digest'] != payload['program_digest'] or program['code_identity'] != self._installed_code_identity():
             raise DomainError('CODE_CHANGED', 'The installed runtime differs from the pinned release. Publish a new evaluated candidate.', 409)
         stage('Validating immutable source')
         asset = self.store.get('asset', payload['asset_id'])
@@ -303,6 +415,7 @@ class Service:
         stage('Preparing facts and shared data')
         snapshot = prepare(rows, payload['period'], source_ref(asset), program={k: program[k] for k in ('id', 'version', 'digest')},
                            report_type_id=payload['report_type_id'])
+        self._installed_code_identity()
         report_type = self.store.get('report_type', payload['report_type_id'])
         raw = snapshot.model_dump(mode='json')
         raw['title'] = report_type['name']
@@ -314,6 +427,7 @@ class Service:
         data = snapshot_dict(snapshot)
         self.store.put_blob(canonical(data))
         stage('Freezing native report')
+        self._installed_code_identity()
         self.store.finish(job['id'], job['token'], result={'snapshot_id': data['id']}, records=[('snapshot', data)])
 
     def execute_export(self, job, stage):
@@ -371,8 +485,49 @@ class Service:
                         'message': 'Configure FOUNDRY_SOFFICE to enable PDF previews of the actual Office file.'})
             self.store.finish(job['id'], job['token'], result={'export_id': export['id']}, records=[('export', export)])
 
+    def _program_view(self, program, report_type, installed, parent=None):
+        result = copy.deepcopy(program)
+        result['active_program_id'] = report_type['active_program_id']
+        result['lifecycle_status'] = ('active' if program['id'] == report_type['active_program_id'] else
+                                      'historical' if program['state'] == 'published' else program['state'])
+        result['runtime_status'] = ('restart_required' if installed != PROCESS_CODE_IDENTITY else
+                                    'current' if program['code_identity'] == installed else 'code_changed')
+        result['change_summary'] = None
+        if parent:
+            before = parent['code_identity']['files']
+            after = program['code_identity']['files']
+            result['change_summary'] = {
+                'added_files': sorted(set(after) - set(before)),
+                'removed_files': sorted(set(before) - set(after)),
+                'changed_files': sorted(name for name in set(before) & set(after) if before[name] != after[name]),
+                'python_changed': parent['code_identity']['python'] != program['code_identity']['python'],
+                'policy_changed': parent['policy'] != program['policy'] or parent['input_contract'] != program['input_contract'],
+                'decision_review_required': any(not d['resolution'] for d in program['decisions']),
+            }
+        return result
+
+    def program_view(self, id):
+        installed = code_identity()
+        with self.store.connect() as db:
+            db.execute('BEGIN')
+            program = self.store.get('program', id, db)
+            report_type = self.store.get('report_type', program['report_type_id'], db)
+            parent_id = program.get('lineage', {}).get('parent_program_id')
+            parent = self.store.get('release', parent_id, db) if parent_id else None
+            return self._program_view(program, report_type, installed, parent)
+
     def bootstrap(self):
-        return {'report_types': self.store.list('report_type'), 'programs': self.store.list('program'),
+        installed = code_identity()
+        with self.store.connect() as db:
+            # One read transaction keeps active pointers and release labels consistent.
+            db.execute('BEGIN')
+            report_types = self.store.list('report_type', db)
+            by_type = {t['id']: t for t in report_types}
+            releases = {p['id']: p for p in self.store.list('release', db)}
+            programs = [self._program_view(p, by_type[p['report_type_id']], installed,
+                                           releases.get(p.get('lineage', {}).get('parent_program_id')))
+                        for p in self.store.list('program', db)]
+        return {'report_types': report_types, 'programs': programs,
                 'snapshots': self.store.list('snapshot'), 'assets': self.store.list('asset'), 'jobs': self.store.jobs(),
                 'capabilities': {'formats': ['docx', 'xlsx', 'pdf', 'pptx'], 'learning': False,
                     'runtime': 'trusted_regional_revenue', 'native_pivot': 'structural_verified_target_certification_pending',

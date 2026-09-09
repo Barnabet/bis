@@ -35,6 +35,9 @@ class Decision(Evaluate):
     decision_id: str = Field(min_length=1, max_length=100)
     resolution: str = Field(min_length=1, max_length=100)
 
+class CandidateMutation(Evaluate):
+    reason: str = Field(min_length=1, max_length=1000)
+
 class Run(Input):
     report_type_id: str
     asset_id: str
@@ -140,7 +143,21 @@ def create_app(data_dir=None, start_worker=True):
 
     @app.get('/api/programs/{id}')
     def program(id: str):
-        return store.get('program', id)
+        return service.program_view(id)
+
+    @app.get('/api/programs/{id}/package')
+    def program_package(id: str):
+        release = store.get('release', id)
+        data = store.read_blob(release['package_artifact_digest'])
+        return download(data, f'program-{release["version"]}-{id}.json', 'application/json')
+
+    @app.post('/api/programs/{id}/candidates', status_code=201)
+    def create_candidate(id: str, body: CandidateMutation):
+        return service.create_candidate(id, body.expected_digest, body.reason)
+
+    @app.post('/api/programs/{id}/discard')
+    def discard_candidate(id: str, body: CandidateMutation):
+        return service.discard_candidate(id, body.expected_digest, body.reason)
 
     @app.post('/api/programs/{id}/evaluate')
     def evaluate(id: str, body: Evaluate):

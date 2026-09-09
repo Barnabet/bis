@@ -21,6 +21,7 @@ import type {
   ReportNode,
   Snapshot,
 } from "./types";
+import { activeProgramFor, canRunProgram } from "./types";
 import { identifier, messageOf, post } from "./api";
 import { Badge, CheckLine, ErrorNotice, Modal, pretty, Spinner } from "./ui";
 
@@ -185,10 +186,8 @@ export function RunDialog({
   onCancel: () => void;
   onClose: () => void;
 }) {
-  const published = data.report_types.filter((t) =>
-    data.programs.some(
-      (p) => p.report_type_id === t.id && p.state === "published",
-    ),
+  const published = data.report_types.filter((type) =>
+    canRunProgram(activeProgramFor(type, data.programs)),
   );
   const usable = data.assets.filter(
     (a) =>
@@ -205,8 +204,11 @@ export function RunDialog({
     as_of: "2026-04-01T00:00:00+02:00",
   };
   const period = snapshot?.period ?? fallback;
+  const preferredType = reportTypeId ?? snapshot?.report_type_id;
   const [type, setType] = useState(
-    reportTypeId ?? snapshot?.report_type_id ?? published[0]?.id ?? "",
+    published.find((type) => type.id === preferredType)?.id ??
+      published[0]?.id ??
+      "",
   );
   const [source, setSource] = useState(
     usable.find((a) => snapshot?.source_assets.some((s) => s.id === a.id))
@@ -278,15 +280,22 @@ export function RunDialog({
               required
             >
               <option value="" disabled>
-                Select a published program
+                Select an active program
               </option>
               {published.map((t) => (
                 <option value={t.id} key={t.id}>
-                  {t.name}
+                  {t.name} · active v
+                  {activeProgramFor(t, data.programs)?.version}
                 </option>
               ))}
             </select>
           </label>
+          {published.length === 0 && (
+            <div className="notice warning">
+              No active program is ready for new runs. Review the release status
+              in Programs.
+            </div>
+          )}
           <label className="field">
             Transaction source
             <select

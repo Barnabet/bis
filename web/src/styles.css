@@ -4082,3 +4082,159 @@ body {
 .report-history time {
   font-size: 12px;
 }
+
+/* Program versions share a lifecycle without interrupting the active release. */
+.program-version-navigation {
+  margin-bottom: 26px;
+}
+.program-version-navigation > section > h2 {
+  color: #62715d;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.program-version-navigation .program-selector > button > span:not(.badge) {
+  text-align: left;
+}
+.program-version-navigation .program-selector strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+.program-history {
+  margin-top: 8px;
+}
+.program-history > summary {
+  font-size: 14px;
+  color: #62715d;
+}
+.program-release-label,
+.program-success,
+.program-active-note,
+.prior-decision {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.program-release-label {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.program-success,
+.program-active-note {
+  font-size: 14px;
+  color: #557149;
+  margin: 0 0 22px;
+  line-height: 1.7;
+}
+.program-success > svg,
+.program-active-note > svg,
+.prior-decision > svg {
+  margin-top: 4px;
+}
+.discard-program {
+  align-self: flex-end;
+  color: #886851;
+  padding: 8px 0;
+}
+.button.danger {
+  color: #8c4e3c;
+  border: 1px solid #ddc3b8;
+  background: #faf0eb;
+}
+.button.danger:hover:not(:disabled) {
+  background: #f3e3d9;
+}
+.lineage-version {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 17px;
+  color: #718166;
+  margin-bottom: 14px;
+}
+.lineage-version strong {
+  color: #446638;
+  font-weight: 500;
+}
+.update-reason {
+  color: #5f7156;
+  font-size: 15px;
+  line-height: 1.8;
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+}
+.change-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  margin: 24px 0 12px;
+  font-size: 13px;
+  color: #748469;
+}
+.change-summary strong {
+  color: #4b6c3b;
+  font-size: 19px;
+  font-weight: 500;
+  margin-right: 5px;
+}
+.changed-file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.changed-file-list > li {
+  display: flex;
+  gap: 15px;
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  color: #6f8163;
+}
+.changed-file-list > li > span {
+  min-width: 62px;
+}
+.changed-file-list code {
+  overflow-wrap: anywhere;
+  min-width: 0;
+  font-size: 12px;
+}
+.prior-decision {
+  padding: 13px 15px;
+  margin: 0 0 16px;
+  border-left: 2px solid #cfdbc3;
+  background: #f8faf3;
+  color: #738465;
+}
+.prior-decision p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.prior-decision strong {
+  font-weight: 500;
+  color: #5b764c;
+}
+.program-package-download {
+  margin-top: 18px;
+}
+.program-package-download p {
+  margin-top: 9px;
+  max-width: 650px;
+}
+@media (max-width: 760px) {
+  .program-version-navigation .program-selector > button {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .program-actions .discard-program {
+    margin-left: auto;
+  }
+  .program-release-label {
+    gap: 12px;
+  }
+  .change-summary {
+    gap: 13px 18px;
+  }
+}

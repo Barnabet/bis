@@ -137,10 +137,12 @@ class Store:
             raise DomainError('NOT_FOUND', f'{kind.replace("_", " ").capitalize()} not found.', 404)
         return json.loads(row['data'])
 
-    def list(self, kind):
-        with self.connect() as db:
-            return [json.loads(row[0]) for row in db.execute(
-                'SELECT data FROM entities WHERE kind=? ORDER BY created_at DESC,id', (kind,))]
+    def list(self, kind, db=None):
+        if db is None:
+            with self.connect() as conn:
+                return self.list(kind, conn)
+        return [json.loads(row[0]) for row in db.execute(
+            'SELECT data FROM entities WHERE kind=? ORDER BY created_at DESC,id', (kind,))]
 
     def update(self, kind, id, record, db=None):
         if kind in {'snapshot', 'asset', 'export', 'release', 'example'}:

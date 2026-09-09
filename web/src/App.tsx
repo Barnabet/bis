@@ -28,6 +28,7 @@ import type {
   ReportNode,
   Snapshot,
 } from "./types";
+import { activeProgramFor, canRunProgram } from "./types";
 import { api, messageOf, post } from "./api";
 import {
   AcceptDialog,
@@ -299,11 +300,11 @@ export default function App() {
   const shared = snapshot
     ? { snapshot, onFact: selectFact, selectedFact: fact }
     : null;
-  const published = data.programs.some(
-    (program) =>
-      program.report_type_id === snapshot?.report_type_id &&
-      program.state === "published",
+  const activeProgram = activeProgramFor(
+    data.report_types.find((type) => type.id === snapshot?.report_type_id),
+    data.programs,
   );
+  const published = canRunProgram(activeProgram);
 
   return (
     <div className="app-shell">
@@ -522,7 +523,11 @@ export default function App() {
               onRefresh={refresh}
             />
           ) : page === "programs" ? (
-            <ProgramsPage programs={data.programs} onRefresh={refresh} />
+            <ProgramsPage
+              programs={data.programs}
+              reportTypes={data.report_types}
+              onRefresh={refresh}
+            />
           ) : (
             <>
               {snapshotLoading ? (
@@ -570,6 +575,14 @@ export default function App() {
                         className="button secondary"
                         onClick={() => beginRun()}
                         disabled={!published || Boolean(activeJob)}
+                        title={
+                          activeProgram?.runtime_status === "code_changed"
+                            ? "The active release needs an update. Open Programs to review it."
+                            : activeProgram?.runtime_status ===
+                                "restart_required"
+                              ? "Restart the local service before creating a new run."
+                              : undefined
+                        }
                       >
                         <Plus size={16} />
                         New run

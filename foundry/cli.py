@@ -14,6 +14,13 @@ def emit(record):
     print(json.dumps(record, indent=2, ensure_ascii=False, default=str))
 
 
+def candidate_reason(value):
+    value = value.strip()
+    if not 1 <= len(value) <= 1000:
+        raise argparse.ArgumentTypeError('Provide a reason between 1 and 1,000 characters.')
+    return value
+
+
 def seed_demo(service):
     existing = [t for t in service.store.list('report_type') if t.get('demo')]
     if existing:
@@ -51,6 +58,13 @@ def main():
     ingest.add_argument('file', type=Path)
     create = commands.add_parser('create-type', help='Create a report type using the trusted revenue adapter')
     create.add_argument('name')
+    for operation, help_text in (
+        ('create-candidate', 'Start the next program version within an existing report type'),
+        ('discard-candidate', 'Discard an unpublished candidate while preserving the active release'),
+    ):
+        candidate = commands.add_parser(operation, help=help_text)
+        candidate.add_argument('program_id')
+        candidate.add_argument('--reason', required=True, type=candidate_reason)
     resolve = commands.add_parser('resolve', help='Record a candidate policy decision')
     resolve.add_argument('program_id'); resolve.add_argument('decision_id'); resolve.add_argument('resolution')
     for operation in ('evaluate', 'publish'):
@@ -79,6 +93,10 @@ def main():
             result = service.upload(args.file.read_bytes(), args.file.name)
         elif args.command == 'create-type':
             result = service.create_type(args.name)
+        elif args.command in ('create-candidate', 'discard-candidate'):
+            p = service.store.get('program', args.program_id)
+            operation = service.create_candidate if args.command == 'create-candidate' else service.discard_candidate
+            result = operation(p['id'], p['digest'], args.reason)
         elif args.command == 'resolve':
             p = service.store.get('program', args.program_id)
             result = service.resolve(p['id'], args.decision_id, args.resolution, p['digest'])
