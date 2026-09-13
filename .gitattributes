@@ -1,0 +1,4 @@
+# Preserve the exact bytes covered by the frozen experiment hashes on checkout.
+fixtures/evolution/** -text
+# CSV writer output intentionally uses CRLF record endings.
+fixtures/evolution/**/*.csv whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

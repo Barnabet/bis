@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "case_id": "percentage_change/future_q4_2026",
+  "selection": "largest_percentage_change",
+  "totals": {
+    "current": "3611.00",
+    "comparison": "2320",
+    "change": "1291.00",
+    "growth_fraction": "1291/2320",
+    "growth_value": "0.5564655172413793103448275862068965517241",
+    "growth_display": "55.6%"
+  },
+  "driver": {
+    "region": "Quartz",
+    "current": "1050.25",
+    "comparison": "700",
+    "change": "350.25",
+    "growth_fraction": "1401/2800",
+    "growth_value": "0.5003571428571428571428571428571428571429",
+    "growth_display": "50.0%"
+  },
+  "regions": [
+    {
+      "region": "Maple",
+      "current": "1600.50",
+      "comparison": "1500",
+      "change": "100.50",
+      "growth_fraction": "67/1000",
+      "growth_value": "0.067",
+      "growth_display": "6.7%"
+    },
+    {
+      "region": "Quartz",
+      "current": "1050.25",
+      "comparison": "700",
+      "change": "350.25",
+      "growth_fraction": "1401/2800",
+      "growth_value": "0.5003571428571428571428571428571428571429",
+      "growth_display": "50.0%"
+    },
+    {
+      "region": "Willow",
+      "current": "60",
+      "comparison": "120",
+      "change": "-60",
+      "growth_fraction": "-1/2",
+      "growth_value": "-0.5",
+      "growth_display": "-50.0%"
+    },
+    {
+      "region": "Zephyr Canary",
+      "current": "900.25",
+      "comparison": "0",
+      "change": "900.25",
+      "growth_fraction": null,
+      "growth_value": null,
+      "growth_display": "Not defined"
+    }
+  ],
+  "commentary": "This report describes posted revenue movements. The source data does not establish the causes of those movements.",
+  "coverage": [
+    "fractional_currency",
+    "split_transactions",
+    "exact_ratio_beats_equal_display_magnitude",
+    "historical_comparison_reused",
+    "split_transactions",
+    "start_inclusive",
+    "end_exclusive",
+    "cancelled_excluded"
+  ],
+  "oracle": {
+    "method": "manually_declared_values_checked_with_independent_fraction_arithmetic",
+    "growth_decimal_precision": 40,
+    "candidate_output_used": false,
+    "runtime_imported": false
+  }
+}

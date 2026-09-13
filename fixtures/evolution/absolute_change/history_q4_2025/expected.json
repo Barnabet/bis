@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "case_id": "absolute_change/history_q4_2025",
+  "selection": "largest_absolute_change",
+  "totals": {
+    "current": "3060",
+    "comparison": "2190",
+    "change": "870",
+    "growth_fraction": "29/73",
+    "growth_value": "0.3972602739726027397260273972602739726027",
+    "growth_display": "39.7%"
+  },
+  "driver": {
+    "region": "Juniper",
+    "current": "900",
+    "comparison": "200",
+    "change": "700",
+    "growth_fraction": "7/2",
+    "growth_value": "3.5",
+    "growth_display": "350.0%"
+  },
+  "regions": [
+    {
+      "region": "Harbor",
+      "current": "2000",
+      "comparison": "1980",
+      "change": "20",
+      "growth_fraction": "1/99",
+      "growth_value": "0.01010101010101010101010101010101010101010",
+      "growth_display": "1.0%"
+    },
+    {
+      "region": "Juniper",
+      "current": "900",
+      "comparison": "200",
+      "change": "700",
+      "growth_fraction": "7/2",
+      "growth_value": "3.5",
+      "growth_display": "350.0%"
+    },
+    {
+      "region": "Larch",
+      "current": "160",
+      "comparison": "10",
+      "change": "150",
+      "growth_fraction": "15",
+      "growth_value": "15",
+      "growth_display": "1500.0%"
+    }
+  ],
+  "commentary": "This report describes posted revenue movements. The source data does not establish the causes of those movements.",
+  "coverage": [
+    "discriminating_history",
+    "split_transactions",
+    "start_inclusive",
+    "end_exclusive",
+    "cancelled_excluded"
+  ],
+  "oracle": {
+    "method": "manually_declared_values_checked_with_independent_fraction_arithmetic",
+    "growth_decimal_precision": 40,
+    "candidate_output_used": false,
+    "runtime_imported": false
+  }
+}

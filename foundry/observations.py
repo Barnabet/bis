@@ -35,6 +35,8 @@ def _numeric(value, unit):
         token = re.sub(r"\s+EUR$", "", token)
         token = token.replace("€", "", 1)
     elif unit == "ratio":
+        if token == "Not defined":
+            return None, None
         if not token.endswith("%"):
             raise ValueError("Percentage observations require an explicit percent sign")
         token = token[:-1]
@@ -77,6 +79,8 @@ def inspect_target(asset: dict) -> dict:
             observation["display"] = display
         if decimals is not None:
             observation["display_decimals"] = decimals
+        if unit == "ratio" and value is None:
+            observation["status"] = "undefined"
         observations.append(observation)
         region["observation_ids"].append(observation["id"])
 
@@ -128,7 +132,7 @@ def inspect_target(asset: dict) -> dict:
         match = re.fullmatch(r"(?:Growth|Revenue growth):\s*(.+)", text)
         if match:
             numeric(region, "revenue.growth", match[1], "ratio")
-            return "summary", "An explicit displayed percentage was observed."
+            return "summary", "An explicit displayed percentage or declared undefined ratio was observed."
         match = re.fullmatch(rf"(?:Selected region|Highlighted region|Driver region):\s*({REGION})\.?", text)
         if match:
             label, _ = _region_identity(match[1])
@@ -212,7 +216,10 @@ def compare_snapshot(snapshot, inspection: dict) -> dict:
             fact = data.get("facts", {}).get(fid)
             if fact is not None:
                 actual = fact["value"]
-                if observation.get("unit") in {"EUR", "ratio"} and actual is not None:
+                if observation.get("status") == "undefined":
+                    passed = (observation.get("unit") == "ratio" and expected is None
+                              and actual is None and fact.get("status") == "undefined")
+                elif observation.get("unit") in {"EUR", "ratio"} and actual is not None:
                     try:
                         places = observation.get("display_decimals", 2) + (2 if observation["unit"] == "ratio" else 0)
                         quantum = Decimal(1).scaleb(-places)

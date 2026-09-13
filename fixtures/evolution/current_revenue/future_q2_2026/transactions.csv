@@ -1,0 +1,17 @@
+transaction_id,date,region,status,amount,currency
+current_revenue-future_q2_2026-001,2026-04-01,  aTRIUM  ,posted,250.00,EUR
+current_revenue-future_q2_2026-002,2026-06-30,Atrium,posted,250.00,EUR
+current_revenue-future_q2_2026-003,2026-04-01,Briar,posted,250.00,EUR
+current_revenue-future_q2_2026-004,2026-06-30,Briar,posted,250.00,EUR
+current_revenue-future_q2_2026-005,2026-04-01,Cypress,posted,62.50,EUR
+current_revenue-future_q2_2026-006,2026-06-30,Cypress,posted,62.50,EUR
+current_revenue-future_q2_2026-007,2025-04-01,  aTRIUM  ,posted,50.00,EUR
+current_revenue-future_q2_2026-008,2025-06-30,Atrium,posted,50.00,EUR
+current_revenue-future_q2_2026-009,2025-04-01,Briar,posted,100.00,EUR
+current_revenue-future_q2_2026-010,2025-06-30,Briar,posted,100.00,EUR
+current_revenue-future_q2_2026-011,2025-04-01,Cypress,posted,250.00,EUR
+current_revenue-future_q2_2026-012,2025-06-30,Cypress,posted,250.00,EUR
+current_revenue-future_q2_2026-013,2026-04-01,Atrium,cancelled,999999.99,EUR
+current_revenue-future_q2_2026-014,2025-04-01,Cypress,cancelled,888888.88,EUR
+current_revenue-future_q2_2026-015,2026-07-01,Atrium,posted,777777.77,EUR
+current_revenue-future_q2_2026-016,2025-07-01,Cypress,posted,666666.66,EUR

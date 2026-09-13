@@ -1,0 +1,17 @@
+transaction_id,date,region,status,amount,currency
+absolute_change-future_q2_2026-001,2026-04-01,  hARBOR  ,posted,50.00,EUR
+absolute_change-future_q2_2026-002,2026-06-30,Harbor,posted,50.00,EUR
+absolute_change-future_q2_2026-003,2026-04-01,Juniper,posted,300.00,EUR
+absolute_change-future_q2_2026-004,2026-06-30,Juniper,posted,300.00,EUR
+absolute_change-future_q2_2026-005,2026-04-01,Larch,posted,25.00,EUR
+absolute_change-future_q2_2026-006,2026-06-30,Larch,posted,25.00,EUR
+absolute_change-future_q2_2026-007,2025-04-01,  hARBOR  ,posted,200.00,EUR
+absolute_change-future_q2_2026-008,2025-06-30,Harbor,posted,200.00,EUR
+absolute_change-future_q2_2026-009,2025-04-01,Juniper,posted,150.00,EUR
+absolute_change-future_q2_2026-010,2025-06-30,Juniper,posted,150.00,EUR
+absolute_change-future_q2_2026-011,2025-04-01,Larch,posted,12.50,EUR
+absolute_change-future_q2_2026-012,2025-06-30,Larch,posted,12.50,EUR
+absolute_change-future_q2_2026-013,2026-04-01,Harbor,cancelled,999999.99,EUR
+absolute_change-future_q2_2026-014,2025-04-01,Larch,cancelled,888888.88,EUR
+absolute_change-future_q2_2026-015,2026-07-01,Harbor,posted,777777.77,EUR
+absolute_change-future_q2_2026-016,2025-07-01,Larch,posted,666666.66,EUR

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "case_id": "current_revenue/history_q4_2025",
+  "selection": "largest_current_revenue",
+  "totals": {
+    "current": "1600",
+    "comparison": "1100",
+    "change": "500",
+    "growth_fraction": "5/11",
+    "growth_value": "0.4545454545454545454545454545454545454545",
+    "growth_display": "45.5%"
+  },
+  "driver": {
+    "region": "Atrium",
+    "current": "1000",
+    "comparison": "990",
+    "change": "10",
+    "growth_fraction": "1/99",
+    "growth_value": "0.01010101010101010101010101010101010101010",
+    "growth_display": "1.0%"
+  },
+  "regions": [
+    {
+      "region": "Atrium",
+      "current": "1000",
+      "comparison": "990",
+      "change": "10",
+      "growth_fraction": "1/99",
+      "growth_value": "0.01010101010101010101010101010101010101010",
+      "growth_display": "1.0%"
+    },
+    {
+      "region": "Briar",
+      "current": "500",
+      "comparison": "100",
+      "change": "400",
+      "growth_fraction": "4",
+      "growth_value": "4",
+      "growth_display": "400.0%"
+    },
+    {
+      "region": "Cypress",
+      "current": "100",
+      "comparison": "10",
+      "change": "90",
+      "growth_fraction": "9",
+      "growth_value": "9",
+      "growth_display": "900.0%"
+    }
+  ],
+  "commentary": "This report describes posted revenue movements. The source data does not establish the causes of those movements.",
+  "coverage": [
+    "discriminating_history",
+    "split_transactions",
+    "start_inclusive",
+    "end_exclusive",
+    "cancelled_excluded"
+  ],
+  "oracle": {
+    "method": "manually_declared_values_checked_with_independent_fraction_arithmetic",
+    "growth_decimal_precision": 40,
+    "candidate_output_used": false,
+    "runtime_imported": false
+  }
+}

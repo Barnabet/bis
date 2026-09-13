@@ -1,0 +1,17 @@
+transaction_id,date,region,status,amount,currency
+current_revenue-history_q3_2025-001,2025-07-01,Atrium,posted,100.00,EUR
+current_revenue-history_q3_2025-002,2025-09-30,Atrium,posted,100.00,EUR
+current_revenue-history_q3_2025-003,2025-07-01,Briar,posted,30.00,EUR
+current_revenue-history_q3_2025-004,2025-09-30,Briar,posted,30.00,EUR
+current_revenue-history_q3_2025-005,2025-07-01,Cypress,posted,7.50,EUR
+current_revenue-history_q3_2025-006,2025-09-30,Cypress,posted,7.50,EUR
+current_revenue-history_q3_2025-007,2024-07-01,Atrium,posted,50.00,EUR
+current_revenue-history_q3_2025-008,2024-09-30,Atrium,posted,50.00,EUR
+current_revenue-history_q3_2025-009,2024-07-01,Briar,posted,25.00,EUR
+current_revenue-history_q3_2025-010,2024-09-30,Briar,posted,25.00,EUR
+current_revenue-history_q3_2025-011,2024-07-01,Cypress,posted,5.00,EUR
+current_revenue-history_q3_2025-012,2024-09-30,Cypress,posted,5.00,EUR
+current_revenue-history_q3_2025-013,2025-07-01,Atrium,cancelled,999999.99,EUR
+current_revenue-history_q3_2025-014,2024-07-01,Cypress,cancelled,888888.88,EUR
+current_revenue-history_q3_2025-015,2025-10-01,Atrium,posted,777777.77,EUR
+current_revenue-history_q3_2025-016,2024-10-01,Cypress,posted,666666.66,EUR

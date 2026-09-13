@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "case_count": 18,
+  "method": "Fraction arithmetic and independent declared-winner ranking; no candidate output",
+  "cases": [
+    {
+      "case_id": "current_revenue/history_q3_2025",
+      "checks_passed": true,
+      "declared_driver": "Atrium",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Atrium",
+        "largest_absolute_change": "Atrium",
+        "largest_percentage_change": "Atrium"
+      }
+    },
+    {
+      "case_id": "current_revenue/history_q4_2025",
+      "checks_passed": true,
+      "declared_driver": "Atrium",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Atrium",
+        "largest_absolute_change": "Briar",
+        "largest_percentage_change": "Cypress"
+      }
+    },
+    {
+      "case_id": "current_revenue/future_q1_2026",
+      "checks_passed": true,
+      "declared_driver": "Atrium",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Atrium",
+        "largest_absolute_change": "Atrium",
+        "largest_percentage_change": "Atrium"
+      }
+    },
+    {
+      "case_id": "current_revenue/future_q2_2026",
+      "checks_passed": true,
+      "declared_driver": "Atrium",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Atrium",
+        "largest_absolute_change": "Atrium",
+        "largest_percentage_change": "Atrium"
+      }
+    },
+    {
+      "case_id": "current_revenue/future_q3_2026",
+      "checks_passed": true,
+      "declared_driver": "Dune Canary",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Dune Canary",
+        "largest_absolute_change": "Dune Canary",
+        "largest_percentage_change": "Cypress"
+      }
+    },
+    {
+      "case_id": "current_revenue/future_q4_2026",
+      "checks_passed": true,
+      "declared_driver": "Briar",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Briar",
+        "largest_absolute_change": "Briar",
+        "largest_percentage_change": "Briar"
+      }
+    },
+    {
+      "case_id": "absolute_change/history_q3_2025",
+      "checks_passed": true,
+      "declared_driver": "Harbor",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Harbor",
+        "largest_absolute_change": "Harbor",
+        "largest_percentage_change": "Harbor"
+      }
+    },
+    {
+      "case_id": "absolute_change/history_q4_2025",
+      "checks_passed": true,
+      "declared_driver": "Juniper",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Harbor",
+        "largest_absolute_change": "Juniper",
+        "largest_percentage_change": "Larch"
+      }
+    },
+    {
+      "case_id": "absolute_change/future_q1_2026",
+      "checks_passed": true,
+      "declared_driver": "Juniper",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Harbor",
+        "largest_absolute_change": "Juniper",
+        "largest_percentage_change": "Larch"
+      }
+    },
+    {
+      "case_id": "absolute_change/future_q2_2026",
+      "checks_passed": true,
+      "declared_driver": "Harbor",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Juniper",
+        "largest_absolute_change": "Harbor",
+        "largest_percentage_change": "Juniper"
+      }
+    },
+    {
+      "case_id": "absolute_change/future_q3_2026",
+      "checks_passed": true,
+      "declared_driver": "Orchard Canary",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Harbor",
+        "largest_absolute_change": "Orchard Canary",
+        "largest_percentage_change": "Juniper"
+      }
+    },
+    {
+      "case_id": "absolute_change/future_q4_2026",
+      "checks_passed": true,
+      "declared_driver": "Orchard Canary",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Harbor",
+        "largest_absolute_change": "Orchard Canary",
+        "largest_percentage_change": "Larch"
+      }
+    },
+    {
+      "case_id": "percentage_change/history_q3_2025",
+      "checks_passed": true,
+      "declared_driver": "Maple",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Maple",
+        "largest_absolute_change": "Maple",
+        "largest_percentage_change": "Maple"
+      }
+    },
+    {
+      "case_id": "percentage_change/history_q4_2025",
+      "checks_passed": true,
+      "declared_driver": "Willow",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Maple",
+        "largest_absolute_change": "Quartz",
+        "largest_percentage_change": "Willow"
+      }
+    },
+    {
+      "case_id": "percentage_change/future_q1_2026",
+      "checks_passed": true,
+      "declared_driver": "Willow",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Maple",
+        "largest_absolute_change": "Maple",
+        "largest_percentage_change": "Willow"
+      }
+    },
+    {
+      "case_id": "percentage_change/future_q2_2026",
+      "checks_passed": true,
+      "declared_driver": "Maple",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Quartz",
+        "largest_absolute_change": "Maple",
+        "largest_percentage_change": "Maple"
+      }
+    },
+    {
+      "case_id": "percentage_change/future_q3_2026",
+      "checks_passed": true,
+      "declared_driver": "Quartz",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Zephyr Canary",
+        "largest_absolute_change": "Zephyr Canary",
+        "largest_percentage_change": "Quartz"
+      }
+    },
+    {
+      "case_id": "percentage_change/future_q4_2026",
+      "checks_passed": true,
+      "declared_driver": "Quartz",
+      "independent_policy_winners": {
+        "largest_current_revenue": "Maple",
+        "largest_absolute_change": "Zephyr Canary",
+        "largest_percentage_change": "Quartz"
+      }
+    }
+  ]
+}

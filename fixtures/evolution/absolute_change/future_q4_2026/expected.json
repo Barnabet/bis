@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "case_id": "absolute_change/future_q4_2026",
+  "selection": "largest_absolute_change",
+  "totals": {
+    "current": "4061.00",
+    "comparison": "3060",
+    "change": "1001.00",
+    "growth_fraction": "1001/3060",
+    "growth_value": "0.3271241830065359477124183006535947712418",
+    "growth_display": "32.7%"
+  },
+  "driver": {
+    "region": "Orchard Canary",
+    "current": "1000.40",
+    "comparison": "0",
+    "change": "1000.40",
+    "growth_fraction": null,
+    "growth_value": null,
+    "growth_display": "Not defined"
+  },
+  "regions": [
+    {
+      "region": "Harbor",
+      "current": "1900.10",
+      "comparison": "2000",
+      "change": "-99.90",
+      "growth_fraction": "-999/20000",
+      "growth_value": "-0.04995",
+      "growth_display": "-5.0%"
+    },
+    {
+      "region": "Juniper",
+      "current": "900.20",
+      "comparison": "900",
+      "change": "0.20",
+      "growth_fraction": "1/4500",
+      "growth_value": "0.0002222222222222222222222222222222222222222",
+      "growth_display": "0.0%"
+    },
+    {
+      "region": "Larch",
+      "current": "260.30",
+      "comparison": "160",
+      "change": "100.30",
+      "growth_fraction": "1003/1600",
+      "growth_value": "0.626875",
+      "growth_display": "62.7%"
+    },
+    {
+      "region": "Orchard Canary",
+      "current": "1000.40",
+      "comparison": "0",
+      "change": "1000.40",
+      "growth_fraction": null,
+      "growth_value": null,
+      "growth_display": "Not defined"
+    }
+  ],
+  "commentary": "This report describes posted revenue movements. The source data does not establish the causes of those movements.",
+  "coverage": [
+    "fractional_currency",
+    "split_transactions",
+    "historical_comparison_reused",
+    "split_transactions",
+    "start_inclusive",
+    "end_exclusive",
+    "cancelled_excluded"
+  ],
+  "oracle": {
+    "method": "manually_declared_values_checked_with_independent_fraction_arithmetic",
+    "growth_decimal_precision": 40,
+    "candidate_output_used": false,
+    "runtime_imported": false
+  }
+}

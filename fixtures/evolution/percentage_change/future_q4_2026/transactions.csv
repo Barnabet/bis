@@ -1,0 +1,19 @@
+transaction_id,date,region,status,amount,currency
+percentage_change-future_q4_2026-001,2026-10-01,Maple,posted,800.25,EUR
+percentage_change-future_q4_2026-002,2026-12-31,Maple,posted,800.25,EUR
+percentage_change-future_q4_2026-003,2026-10-01,Quartz,posted,525.13,EUR
+percentage_change-future_q4_2026-004,2026-12-31,Quartz,posted,525.12,EUR
+percentage_change-future_q4_2026-005,2026-10-01,Willow,posted,30.00,EUR
+percentage_change-future_q4_2026-006,2026-12-31,Willow,posted,30.00,EUR
+percentage_change-future_q4_2026-007,2026-10-01,Zephyr Canary,posted,450.13,EUR
+percentage_change-future_q4_2026-008,2026-12-31,Zephyr Canary,posted,450.12,EUR
+percentage_change-future_q4_2026-009,2025-10-01,Maple,posted,750.00,EUR
+percentage_change-future_q4_2026-010,2025-12-31,Maple,posted,750.00,EUR
+percentage_change-future_q4_2026-011,2025-10-01,Quartz,posted,350.00,EUR
+percentage_change-future_q4_2026-012,2025-12-31,Quartz,posted,350.00,EUR
+percentage_change-future_q4_2026-013,2025-10-01,Willow,posted,60.00,EUR
+percentage_change-future_q4_2026-014,2025-12-31,Willow,posted,60.00,EUR
+percentage_change-future_q4_2026-015,2026-10-01,Maple,cancelled,999999.99,EUR
+percentage_change-future_q4_2026-016,2025-10-01,Zephyr Canary,cancelled,888888.88,EUR
+percentage_change-future_q4_2026-017,2027-01-01,Maple,posted,777777.77,EUR
+percentage_change-future_q4_2026-018,2026-01-01,Zephyr Canary,posted,666666.66,EUR

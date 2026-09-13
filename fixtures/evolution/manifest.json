@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "corpora": [
+    {
+      "id": "current_revenue",
+      "expected_selection": "largest_current_revenue",
+      "future_canary": "Dune Canary",
+      "history": [
+        {
+          "id": "history_q3_2025",
+          "report": "current_revenue/history_q3_2025/report.docx",
+          "source": "current_revenue/history_q3_2025/transactions.csv",
+          "period": "current_revenue/history_q3_2025/period.json",
+          "expected": "current_revenue/history_q3_2025/expected.json"
+        },
+        {
+          "id": "history_q4_2025",
+          "report": "current_revenue/history_q4_2025/report.docx",
+          "source": "current_revenue/history_q4_2025/transactions.csv",
+          "period": "current_revenue/history_q4_2025/period.json",
+          "expected": "current_revenue/history_q4_2025/expected.json"
+        }
+      ],
+      "future": [
+        {
+          "id": "future_q1_2026",
+          "report": "current_revenue/future_q1_2026/report.docx",
+          "source": "current_revenue/future_q1_2026/transactions.csv",
+          "period": "current_revenue/future_q1_2026/period.json",
+          "expected": "current_revenue/future_q1_2026/expected.json"
+        },
+        {
+          "id": "future_q2_2026",
+          "report": "current_revenue/future_q2_2026/report.docx",
+          "source": "current_revenue/future_q2_2026/transactions.csv",
+          "period": "current_revenue/future_q2_2026/period.json",
+          "expected": "current_revenue/future_q2_2026/expected.json"
+        },
+        {
+          "id": "future_q3_2026",
+          "report": "current_revenue/future_q3_2026/report.docx",
+          "source": "current_revenue/future_q3_2026/transactions.csv",
+          "period": "current_revenue/future_q3_2026/period.json",
+          "expected": "current_revenue/future_q3_2026/expected.json"
+        },
+        {
+          "id": "future_q4_2026",
+          "report": "current_revenue/future_q4_2026/report.docx",
+          "source": "current_revenue/future_q4_2026/transactions.csv",
+          "period": "current_revenue/future_q4_2026/period.json",
+          "expected": "current_revenue/future_q4_2026/expected.json"
+        }
+      ]
+    },
+    {
+      "id": "absolute_change",
+      "expected_selection": "largest_absolute_change",
+      "future_canary": "Orchard Canary",
+      "history": [
+        {
+          "id": "history_q3_2025",
+          "report": "absolute_change/history_q3_2025/report.docx",
+          "source": "absolute_change/history_q3_2025/transactions.csv",
+          "period": "absolute_change/history_q3_2025/period.json",
+          "expected": "absolute_change/history_q3_2025/expected.json"
+        },
+        {
+          "id": "history_q4_2025",
+          "report": "absolute_change/history_q4_2025/report.docx",
+          "source": "absolute_change/history_q4_2025/transactions.csv",
+          "period": "absolute_change/history_q4_2025/period.json",
+          "expected": "absolute_change/history_q4_2025/expected.json"
+        }
+      ],
+      "future": [
+        {
+          "id": "future_q1_2026",
+          "report": "absolute_change/future_q1_2026/report.docx",
+          "source": "absolute_change/future_q1_2026/transactions.csv",
+          "period": "absolute_change/future_q1_2026/period.json",
+          "expected": "absolute_change/future_q1_2026/expected.json"
+        },
+        {
+          "id": "future_q2_2026",
+          "report": "absolute_change/future_q2_2026/report.docx",
+          "source": "absolute_change/future_q2_2026/transactions.csv",
+          "period": "absolute_change/future_q2_2026/period.json",
+          "expected": "absolute_change/future_q2_2026/expected.json"
+        },
+        {
+          "id": "future_q3_2026",
+          "report": "absolute_change/future_q3_2026/report.docx",
+          "source": "absolute_change/future_q3_2026/transactions.csv",
+          "period": "absolute_change/future_q3_2026/period.json",
+          "expected": "absolute_change/future_q3_2026/expected.json"
+        },
+        {
+          "id": "future_q4_2026",
+          "report": "absolute_change/future_q4_2026/report.docx",
+          "source": "absolute_change/future_q4_2026/transactions.csv",
+          "period": "absolute_change/future_q4_2026/period.json",
+          "expected": "absolute_change/future_q4_2026/expected.json"
+        }
+      ]
+    },
+    {
+      "id": "percentage_change",
+      "expected_selection": "largest_percentage_change",
+      "future_canary": "Zephyr Canary",
+      "history": [
+        {
+          "id": "history_q3_2025",
+          "report": "percentage_change/history_q3_2025/report.docx",
+          "source": "percentage_change/history_q3_2025/transactions.csv",
+          "period": "percentage_change/history_q3_2025/period.json",
+          "expected": "percentage_change/history_q3_2025/expected.json"
+        },
+        {
+          "id": "history_q4_2025",
+          "report": "percentage_change/history_q4_2025/report.docx",
+          "source": "percentage_change/history_q4_2025/transactions.csv",
+          "period": "percentage_change/history_q4_2025/period.json",
+          "expected": "percentage_change/history_q4_2025/expected.json"
+        }
+      ],
+      "future": [
+        {
+          "id": "future_q1_2026",
+          "report": "percentage_change/future_q1_2026/report.docx",
+          "source": "percentage_change/future_q1_2026/transactions.csv",
+          "period": "percentage_change/future_q1_2026/period.json",
+          "expected": "percentage_change/future_q1_2026/expected.json"
+        },
+        {
+          "id": "future_q2_2026",
+          "report": "percentage_change/future_q2_2026/report.docx",
+          "source": "percentage_change/future_q2_2026/transactions.csv",
+          "period": "percentage_change/future_q2_2026/period.json",
+          "expected": "percentage_change/future_q2_2026/expected.json"
+        },
+        {
+          "id": "future_q3_2026",
+          "report": "percentage_change/future_q3_2026/report.docx",
+          "source": "percentage_change/future_q3_2026/transactions.csv",
+          "period": "percentage_change/future_q3_2026/period.json",
+          "expected": "percentage_change/future_q3_2026/expected.json"
+        },
+        {
+          "id": "future_q4_2026",
+          "report": "percentage_change/future_q4_2026/report.docx",
+          "source": "percentage_change/future_q4_2026/transactions.csv",
+          "period": "percentage_change/future_q4_2026/period.json",
+          "expected": "percentage_change/future_q4_2026/expected.json"
+        }
+      ]
+    }
+  ]
+}

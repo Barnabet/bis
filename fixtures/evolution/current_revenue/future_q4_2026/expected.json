@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "case_id": "current_revenue/future_q4_2026",
+  "selection": "largest_current_revenue",
+  "totals": {
+    "current": "2551.00",
+    "comparison": "1600",
+    "change": "951.00",
+    "growth_fraction": "951/1600",
+    "growth_value": "0.594375",
+    "growth_display": "59.4%"
+  },
+  "driver": {
+    "region": "Briar",
+    "current": "1500.50",
+    "comparison": "500",
+    "change": "1000.50",
+    "growth_fraction": "2001/1000",
+    "growth_value": "2.001",
+    "growth_display": "200.1%"
+  },
+  "regions": [
+    {
+      "region": "Atrium",
+      "current": "1000.25",
+      "comparison": "1000",
+      "change": "0.25",
+      "growth_fraction": "1/4000",
+      "growth_value": "0.00025",
+      "growth_display": "0.0%"
+    },
+    {
+      "region": "Briar",
+      "current": "1500.50",
+      "comparison": "500",
+      "change": "1000.50",
+      "growth_fraction": "2001/1000",
+      "growth_value": "2.001",
+      "growth_display": "200.1%"
+    },
+    {
+      "region": "Cypress",
+      "current": "0",
+      "comparison": "100",
+      "change": "-100",
+      "growth_fraction": "-1",
+      "growth_value": "-1",
+      "growth_display": "-100.0%"
+    },
+    {
+      "region": "Dune Canary",
+      "current": "50.25",
+      "comparison": "0",
+      "change": "50.25",
+      "growth_fraction": null,
+      "growth_value": null,
+      "growth_display": "Not defined"
+    }
+  ],
+  "commentary": "This report describes posted revenue movements. The source data does not establish the causes of those movements.",
+  "coverage": [
+    "fractional_currency",
+    "split_transactions",
+    "historical_comparison_reused",
+    "split_transactions",
+    "start_inclusive",
+    "end_exclusive",
+    "cancelled_excluded"
+  ],
+  "oracle": {
+    "method": "manually_declared_values_checked_with_independent_fraction_arithmetic",
+    "growth_decimal_precision": 40,
+    "candidate_output_used": false,
+    "runtime_imported": false
+  }
+}

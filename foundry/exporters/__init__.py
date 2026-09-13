@@ -581,8 +581,9 @@ def _pdf(snapshot, nodes, path, policy, view, images):
     from reportlab.lib.pagesizes import A4
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether
     from pypdf import PdfReader, PdfWriter
-    # Helvetica's standard PDF encoding covers the declared Latin profile.
-    # Reject unsupported text instead of emitting unmarked missing glyphs.
+    # Helvetica covers the declared Latin profile. ReportLab's built-in Symbol
+    # fallback preserves U+2212, used by canonical negative currency displays.
+    # Allow that exact glyph without rewriting text or admitting other symbols.
     texts = [snapshot["title"], snapshot["period"]["label"]]
     for node in nodes:
         texts.append(node["title"])
@@ -594,7 +595,7 @@ def _pdf(snapshot, nodes, path, policy, view, images):
         elif node["kind"] == "image" and not node.get("decorative", False):
             texts.append(node["alt_text"])
     try:
-        "".join(texts).encode("cp1252")
+        "".join(texts).replace("\u2212", "").encode("cp1252")
     except UnicodeEncodeError:
         raise ExportError("The native PDF font profile does not cover this text. Export DOCX or install a wider font profile.", "unsupported_font_glyph") from None
     margin = float(view.get("recipe", {}).get("margin_mm", 18)) * 72 / 25.4
@@ -636,7 +637,7 @@ def _pdf(snapshot, nodes, path, policy, view, images):
             story.append(tracked(content, styles["body"], anchor))
             mapping.append(_location(node, "static_text", f"named_destination:{anchor}", editable=False))
         elif node["kind"] in {"table", "pivot"}:
-            story.append(tracked(escape(node["title"]), styles["head"], anchor))
+            heading = tracked(escape(node["title"]), styles["head"], anchor)
             headers, rows, _, _ = _table(snapshot, node, node["kind"] == "pivot")
             table = Table([[Paragraph(escape(value), styles["thead"]) for value in headers]] +
                           [[Paragraph(escape(value), styles["cell"]) for value in row] for row in rows],
@@ -646,9 +647,13 @@ def _pdf(snapshot, nodes, path, policy, view, images):
                                        ("GRID",(0,0),(-1,-1),.4,colors.HexColor("#D9D9D9")),
                                        ("VALIGN",(0,0),(-1,-1),"MIDDLE"), ("TOPPADDING",(0,0),(-1,-1),7),
                                        ("BOTTOMPADDING",(0,0),(-1,-1),7)]))
-            story.extend([table, Spacer(1, 8)])
             if node["kind"] == "pivot":
-                story.append(Paragraph("Static pivot result under the flow view policy.", styles["small"]))
+                # A static-pivot caption describes this table and must not be
+                # pushed onto an otherwise empty page after the final row.
+                story.append(KeepTogether([heading, table, Spacer(1, 8),
+                    Paragraph("Static pivot result under the flow view policy.", styles["small"])]))
+            else:
+                story.extend([heading, table, Spacer(1, 8)])
             mapping.append(_location(node, "equivalent_static_table" if node["kind"] == "pivot" else "static_table",
                                      f"named_destination:{anchor}", editable=False))
         elif node["kind"] == "chart":
@@ -692,7 +697,7 @@ def _pdf(snapshot, nodes, path, policy, view, images):
             raise ExportError("PDF text verification failed.", "render_content_mismatch")
     return mapping, [{"check": "pdf_readback_and_accepted_text", "status": "pass"}], "reportlab", {
         "page_count": len(reader.pages), "pdf_origin": "native_flow_reportlab", "office_pagination_equivalence": False,
-        "font_profile": "Helvetica / Windows Latin", "margin_mm": margin*25.4/72, "paragraph_indent_pt": indent}
+        "font_profile": "Helvetica / Windows Latin; Symbol for U+2212 minus", "margin_mm": margin*25.4/72, "paragraph_indent_pt": indent}
 
 
 def _pptx(snapshot, nodes, path, policy, view, images):

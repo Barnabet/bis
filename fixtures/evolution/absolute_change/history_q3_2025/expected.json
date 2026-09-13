@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "case_id": "absolute_change/history_q3_2025",
+  "selection": "largest_absolute_change",
+  "totals": {
+    "current": "390",
+    "comparison": "198",
+    "change": "192",
+    "growth_fraction": "32/33",
+    "growth_value": "0.9696969696969696969696969696969696969697",
+    "growth_display": "97.0%"
+  },
+  "driver": {
+    "region": "Harbor",
+    "current": "300",
+    "comparison": "150",
+    "change": "150",
+    "growth_fraction": "1",
+    "growth_value": "1",
+    "growth_display": "100.0%"
+  },
+  "regions": [
+    {
+      "region": "Harbor",
+      "current": "300",
+      "comparison": "150",
+      "change": "150",
+      "growth_fraction": "1",
+      "growth_value": "1",
+      "growth_display": "100.0%"
+    },
+    {
+      "region": "Juniper",
+      "current": "80",
+      "comparison": "40",
+      "change": "40",
+      "growth_fraction": "1",
+      "growth_value": "1",
+      "growth_display": "100.0%"
+    },
+    {
+      "region": "Larch",
+      "current": "10",
+      "comparison": "8",
+      "change": "2",
+      "growth_fraction": "1/4",
+      "growth_value": "0.25",
+      "growth_display": "25.0%"
+    }
+  ],
+  "commentary": "This report describes posted revenue movements. The source data does not establish the causes of those movements.",
+  "coverage": [
+    "ambiguous_history",
+    "split_transactions",
+    "start_inclusive",
+    "end_exclusive",
+    "cancelled_excluded"
+  ],
+  "oracle": {
+    "method": "manually_declared_values_checked_with_independent_fraction_arithmetic",
+    "growth_decimal_precision": 40,
+    "candidate_output_used": false,
+    "runtime_imported": false
+  }
+}

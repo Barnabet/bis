@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "case_id": "percentage_change/future_q3_2026",
+  "selection": "largest_percentage_change",
+  "totals": {
+    "current": "1085",
+    "comparison": "530",
+    "change": "555",
+    "growth_fraction": "111/106",
+    "growth_value": "1.047169811320754716981132075471698113208",
+    "growth_display": "104.7%"
+  },
+  "driver": {
+    "region": "Quartz",
+    "current": "0",
+    "comparison": "100",
+    "change": "-100",
+    "growth_fraction": "-1",
+    "growth_value": "-1",
+    "growth_display": "-100.0%"
+  },
+  "regions": [
+    {
+      "region": "Maple",
+      "current": "440",
+      "comparison": "400",
+      "change": "40",
+      "growth_fraction": "1/10",
+      "growth_value": "0.1",
+      "growth_display": "10.0%"
+    },
+    {
+      "region": "Quartz",
+      "current": "0",
+      "comparison": "100",
+      "change": "-100",
+      "growth_fraction": "-1",
+      "growth_value": "-1",
+      "growth_display": "-100.0%"
+    },
+    {
+      "region": "Willow",
+      "current": "45",
+      "comparison": "30",
+      "change": "15",
+      "growth_fraction": "1/2",
+      "growth_value": "0.5",
+      "growth_display": "50.0%"
+    },
+    {
+      "region": "Zephyr Canary",
+      "current": "600",
+      "comparison": "0",
+      "change": "600",
+      "growth_fraction": null,
+      "growth_value": null,
+      "growth_display": "Not defined"
+    }
+  ],
+  "commentary": "This report describes posted revenue movements. The source data does not establish the causes of those movements.",
+  "coverage": [
+    "new_region",
+    "disappeared_region",
+    "undefined_regional_growth_excluded_from_selection",
+    "historical_comparison_reused",
+    "split_transactions",
+    "start_inclusive",
+    "end_exclusive",
+    "cancelled_excluded"
+  ],
+  "oracle": {
+    "method": "manually_declared_values_checked_with_independent_fraction_arithmetic",
+    "growth_decimal_precision": 40,
+    "candidate_output_used": false,
+    "runtime_imported": false
+  }
+}

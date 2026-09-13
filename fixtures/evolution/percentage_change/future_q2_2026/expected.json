@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "case_id": "percentage_change/future_q2_2026",
+  "selection": "largest_percentage_change",
+  "totals": {
+    "current": "510",
+    "comparison": "500",
+    "change": "10",
+    "growth_fraction": "1/50",
+    "growth_value": "0.02",
+    "growth_display": "2.0%"
+  },
+  "driver": {
+    "region": "Maple",
+    "current": "100",
+    "comparison": "200",
+    "change": "-100",
+    "growth_fraction": "-1/2",
+    "growth_value": "-0.5",
+    "growth_display": "-50.0%"
+  },
+  "regions": [
+    {
+      "region": "Maple",
+      "current": "100",
+      "comparison": "200",
+      "change": "-100",
+      "growth_fraction": "-1/2",
+      "growth_value": "-0.5",
+      "growth_display": "-50.0%"
+    },
+    {
+      "region": "Quartz",
+      "current": "300",
+      "comparison": "200",
+      "change": "100",
+      "growth_fraction": "1/2",
+      "growth_value": "0.5",
+      "growth_display": "50.0%"
+    },
+    {
+      "region": "Willow",
+      "current": "110",
+      "comparison": "100",
+      "change": "10",
+      "growth_fraction": "1/10",
+      "growth_value": "0.1",
+      "growth_display": "10.0%"
+    }
+  ],
+  "commentary": "This report describes posted revenue movements. The source data does not establish the causes of those movements.",
+  "coverage": [
+    "selection_tie",
+    "normalized_region_tie_break",
+    "tie_opposite_signs",
+    "split_transactions",
+    "start_inclusive",
+    "end_exclusive",
+    "cancelled_excluded"
+  ],
+  "oracle": {
+    "method": "manually_declared_values_checked_with_independent_fraction_arithmetic",
+    "growth_decimal_precision": 40,
+    "candidate_output_used": false,
+    "runtime_imported": false
+  }
+}

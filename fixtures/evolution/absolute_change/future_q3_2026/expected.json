@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "case_id": "absolute_change/future_q3_2026",
+  "selection": "largest_absolute_change",
+  "totals": {
+    "current": "595",
+    "comparison": "390",
+    "change": "205",
+    "growth_fraction": "41/78",
+    "growth_value": "0.5256410256410256410256410256410256410256",
+    "growth_display": "52.6%"
+  },
+  "driver": {
+    "region": "Orchard Canary",
+    "current": "250",
+    "comparison": "0",
+    "change": "250",
+    "growth_fraction": null,
+    "growth_value": null,
+    "growth_display": "Not defined"
+  },
+  "regions": [
+    {
+      "region": "Harbor",
+      "current": "330",
+      "comparison": "300",
+      "change": "30",
+      "growth_fraction": "1/10",
+      "growth_value": "0.1",
+      "growth_display": "10.0%"
+    },
+    {
+      "region": "Juniper",
+      "current": "0",
+      "comparison": "80",
+      "change": "-80",
+      "growth_fraction": "-1",
+      "growth_value": "-1",
+      "growth_display": "-100.0%"
+    },
+    {
+      "region": "Larch",
+      "current": "15",
+      "comparison": "10",
+      "change": "5",
+      "growth_fraction": "1/2",
+      "growth_value": "0.5",
+      "growth_display": "50.0%"
+    },
+    {
+      "region": "Orchard Canary",
+      "current": "250",
+      "comparison": "0",
+      "change": "250",
+      "growth_fraction": null,
+      "growth_value": null,
+      "growth_display": "Not defined"
+    }
+  ],
+  "commentary": "This report describes posted revenue movements. The source data does not establish the causes of those movements.",
+  "coverage": [
+    "new_region",
+    "disappeared_region",
+    "undefined_regional_growth",
+    "historical_comparison_reused",
+    "split_transactions",
+    "start_inclusive",
+    "end_exclusive",
+    "cancelled_excluded"
+  ],
+  "oracle": {
+    "method": "manually_declared_values_checked_with_independent_fraction_arithmetic",
+    "growth_decimal_precision": 40,
+    "candidate_output_used": false,
+    "runtime_imported": false
+  }
+}

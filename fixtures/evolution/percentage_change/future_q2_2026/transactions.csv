@@ -1,0 +1,17 @@
+transaction_id,date,region,status,amount,currency
+percentage_change-future_q2_2026-001,2026-04-01,  mAPLE  ,posted,50.00,EUR
+percentage_change-future_q2_2026-002,2026-06-30,Maple,posted,50.00,EUR
+percentage_change-future_q2_2026-003,2026-04-01,Quartz,posted,150.00,EUR
+percentage_change-future_q2_2026-004,2026-06-30,Quartz,posted,150.00,EUR
+percentage_change-future_q2_2026-005,2026-04-01,Willow,posted,55.00,EUR
+percentage_change-future_q2_2026-006,2026-06-30,Willow,posted,55.00,EUR
+percentage_change-future_q2_2026-007,2025-04-01,  mAPLE  ,posted,100.00,EUR
+percentage_change-future_q2_2026-008,2025-06-30,Maple,posted,100.00,EUR
+percentage_change-future_q2_2026-009,2025-04-01,Quartz,posted,100.00,EUR
+percentage_change-future_q2_2026-010,2025-06-30,Quartz,posted,100.00,EUR
+percentage_change-future_q2_2026-011,2025-04-01,Willow,posted,50.00,EUR
+percentage_change-future_q2_2026-012,2025-06-30,Willow,posted,50.00,EUR
+percentage_change-future_q2_2026-013,2026-04-01,Maple,cancelled,999999.99,EUR
+percentage_change-future_q2_2026-014,2025-04-01,Willow,cancelled,888888.88,EUR
+percentage_change-future_q2_2026-015,2026-07-01,Maple,posted,777777.77,EUR
+percentage_change-future_q2_2026-016,2025-07-01,Willow,posted,666666.66,EUR

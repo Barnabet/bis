@@ -169,6 +169,16 @@ npm --prefix web run build
 
 Tests cover independent expected results, source corruption, interval boundaries, cancellation, duplicate requests, missing periods, source drift, normalized region ties, provenance and graph cycles, immutable revisions, publication gates, unsupported prose, export coverage and actual Office structures. Image tests exercise normalization and frozen identity. Learning tests inspect real DOCX targets, preserve ambiguity, reject contradictions and compare values, display precision, table membership/order and exact disclosure text. Provider/composition tests cover response failures and fact/evidence constraints without claiming live-model quality. See the [validation record](docs/VALIDATION.md) for the current automated and visual evidence.
 
+The broader [historical-to-future experiment](docs/EVOLUTION_VALIDATION.md) uses three independent synthetic corpora, six historical report/source pairs and twelve later periods. It checks full expected reports, 48 source transformations and all four export formats. Repeat its deterministic or explicitly opted-in live route with:
+
+```sh
+uv run python scripts/validate_evolution.py --offline
+# Configure the local CLIProxyAPI environment above before the live route.
+uv run python scripts/validate_evolution.py --run-live
+```
+
+Live mode uses exact `claude-opus-5` for three policy proposals and twelve commentaries, capped at 27 requests including repairs. It creates a separate workspace under ignored `output/evolution-validation/`, preserves failures, and leaves reports awaiting review. The 13 September run passed all twelve periods using 16 real requests; the final regression suite passes 485 tests. This validates automatic later-period drafts within the registered revenue policies after explicit policy review and period selection.
+
 ## Deliberately unfinished architecture work
 
 Arbitrary Python program synthesis/execution, broader metric and source-policy learning, calibrated semantic model review, image OCR or fact inference, imported Office template recovery, advanced pivot features, parser isolation, PostgreSQL/object-store deployment, multi-user authentication/authorization, retention controls and measured production service limits remain future milestones. Archived runtime packages are evidence and restoration artifacts, not independently executable environments. The implemented hypothesis search and optional composition do not complete the broader architecture.
