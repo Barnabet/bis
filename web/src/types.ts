@@ -228,7 +228,9 @@ export type Bootstrap = {
 
 export type ModelStatus = {
   configured: boolean;
-  provider: string;
+  provider: "openai" | "cliproxyapi";
+  base_url: string;
+  protocol: "responses";
   model: string | null;
   limits?: Record<string, unknown>;
 };

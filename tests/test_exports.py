@@ -127,6 +127,51 @@ def test_pptx_two_slides_native_chart_and_editable_tables(snapshot, tmp_path):
         chart_wb.close()
 
 
+def test_pptx_composed_paragraphs_preserve_exact_newlines_and_fact_displays(snapshot, tmp_path):
+    commentary = next(node for node in snapshot['nodes'] if node['id'] == 'commentary')
+    commentary.update(mode='composed', runs=[
+        {'type': 'text', 'text': 'Posted revenue for the current window totals '},
+        {'type': 'fact', 'fact_id': 'revenue.current'},
+        {'type': 'text', 'text': ', compared with '},
+        {'type': 'fact', 'fact_id': 'revenue.comparison'},
+        {'type': 'text', 'text': ' for the comparison window.'},
+        {'type': 'text', 'text': '\n\n'},
+        {'type': 'text', 'text': 'The selected region is '},
+        {'type': 'fact', 'fact_id': 'driver.region'},
+        {'type': 'text', 'text': '. According to the supplied evidence, "The renewal campaign drove the reported movement." '
+                                 'This source claim remains unverified.'},
+    ])
+    frozen = copy.deepcopy(snapshot)
+    expected = render_runs(commentary['runs'], snapshot['facts'])
+    result = export_snapshot(snapshot, 'pptx', tmp_path)
+    matches = [shape for slide in Presentation(result['path']).slides for shape in slide.shapes
+               if shape.has_text_frame and shape.text == expected]
+    assert len(matches) == 1 and snapshot == frozen
+    frame = matches[0].text_frame
+    assert [paragraph.text for paragraph in frame.paragraphs] == expected.split('\n')
+    assert len(frame.paragraphs) == 3 and frame.paragraphs[1].text == ''
+    assert '\v' not in frame.text
+    assert all(paragraph.font.name == 'Calibri' and paragraph.font.size.pt == 13 for paragraph in frame.paragraphs)
+    assert any(check['check'] == 'native_chart_and_text_roundtrip' and check['status'] == 'pass'
+               for check in result['manifest']['validation_results'])
+
+
+def test_pdf_preserves_explicit_paragraph_spacing_and_escapes_literal_markup(snapshot, tmp_path):
+    commentary = next(node for node in snapshot['nodes'] if node['id'] == 'commentary')
+    first = 'Current period context <b>is literal</b> & remains unverified.'
+    second = 'The selected region remains subject to editorial review.'
+    commentary.update(mode='composed', runs=[{'type': 'text', 'text': first + '\n\n' + second}])
+    result = export_snapshot(snapshot, 'pdf', tmp_path)
+    reader = PdfReader(result['path'])
+    layout_lines = [line.strip() for page in reader.pages
+                    for line in page.extract_text(extraction_mode='layout').splitlines()]
+    first_index = layout_lines.index(first)
+    second_index = layout_lines.index(second)
+    assert second_index >= first_index + 2
+    assert all(not line for line in layout_lines[first_index + 1:second_index])
+    assert 'commentary' in reader.named_destinations
+
+
 def test_pdf_native_route_and_required_text(snapshot, tmp_path):
     result = export_snapshot(snapshot, "pdf", tmp_path)
     reader = PdfReader(result["path"])

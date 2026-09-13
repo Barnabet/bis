@@ -1,4 +1,4 @@
-"""Bounded, stateless OpenAI Responses transport. Never logs credentials or bodies.
+"""Bounded Responses transport for OpenAI or an explicitly configured local proxy.
 
 Official wire contract: https://developers.openai.com/api/docs/guides/structured-outputs
 The injectable transport exists for deterministic tests, not an application mock mode.
@@ -7,11 +7,13 @@ from __future__ import annotations
 
 import hashlib
 import http.client
+import ipaddress
 import json
 import os
 import re
 import ssl
 import time
+from urllib.parse import urlsplit
 
 from .errors import DomainError
 
@@ -43,9 +45,17 @@ def _json(data):
     return json.loads(data, object_pairs_hook=pairs, parse_constant=constant)
 
 
-def _https_transport(body, headers, *, timeout, max_response_bytes):
-    """Fixed HTTPS origin; no redirects, configurable URLs, cookies or tool calls."""
-    connection = http.client.HTTPSConnection('api.openai.com', timeout=timeout, context=ssl.create_default_context())
+def _responses_transport(body, headers, *, timeout, max_response_bytes, scheme='https',
+                         host='api.openai.com', port=None):
+    """Validated origin only; no redirects, cookies, environment proxies or tools."""
+    options = {'timeout': timeout}
+    if port is not None:
+        options['port'] = port
+    if scheme == 'https':
+        options['context'] = ssl.create_default_context()
+        connection = http.client.HTTPSConnection(host, **options)
+    else:
+        connection = http.client.HTTPConnection(host, **options)
     deadline = time.monotonic() + timeout
     try:
         connection.request('POST', '/v1/responses', body=body, headers=headers)
@@ -84,11 +94,50 @@ def _https_transport(body, headers, *, timeout, max_response_bytes):
         connection.close()
 
 
+def _https_transport(body, headers, *, timeout, max_response_bytes):
+    return _responses_transport(body, headers, timeout=timeout, max_response_bytes=max_response_bytes)
+
+
+def _endpoint(provider, value):
+    if provider == 'openai':
+        if value not in (None, '', 'https://api.openai.com/v1', 'https://api.openai.com/v1/'):
+            raise DomainError('MODEL_CONFIGURATION_INVALID', 'Select cliproxyapi explicitly to use a local model endpoint.')
+        return 'https://api.openai.com/v1', 'https', 'api.openai.com', None
+    value = value or 'http://127.0.0.1:8317/v1'
+    try:
+        if not isinstance(value, str) or any(ord(c) < 33 or ord(c) > 126 for c in value):
+            raise ValueError()
+        parsed = urlsplit(value)
+        host, port = parsed.hostname, parsed.port
+        if (parsed.scheme not in {'http', 'https'} or parsed.username is not None or parsed.password is not None
+                or parsed.query or parsed.fragment or '?' in value or '#' in value
+                or parsed.path not in {'', '/', '/v1', '/v1/'} or not host):
+            raise ValueError()
+        host = '127.0.0.1' if host == 'localhost' else host
+        if not ipaddress.ip_address(host).is_loopback or (port is not None and not 1 <= port <= 65535):
+            raise ValueError()
+        authority = f'[{host}]' if ':' in host else host
+        if port is not None:
+            authority += f':{port}'
+        return f'{parsed.scheme}://{authority}/v1', parsed.scheme, host, port
+    except (ValueError, TypeError):
+        raise DomainError('MODEL_CONFIGURATION_INVALID', 'CLIProxyAPI requires a loopback HTTP(S) URL with an optional /v1 path, without credentials, queries or fragments.') from None
+
+
 class OpenAIProvider:
     def __init__(self, *, api_key=None, model=None, transport=None, timeout=TIMEOUT_SECONDS,
-                 max_output_tokens=MAX_OUTPUT_TOKENS, max_response_bytes=MAX_RESPONSE_BYTES):
-        self._api_key = (os.environ.get('OPENAI_API_KEY', '') if api_key is None else api_key).strip()
-        self.model = (os.environ.get('FOUNDRY_OPENAI_MODEL', DEFAULT_MODEL) if model is None else model).strip()
+                 max_output_tokens=MAX_OUTPUT_TOKENS, max_response_bytes=MAX_RESPONSE_BYTES,
+                 provider=None, base_url=None):
+        self.provider = os.environ.get('FOUNDRY_MODEL_PROVIDER', 'openai') if provider is None else provider
+        if self.provider not in {'openai', 'cliproxyapi'}:
+            raise DomainError('MODEL_CONFIGURATION_INVALID', 'Choose openai or cliproxyapi as the model provider.')
+        self.base_url, scheme, host, port = _endpoint(self.provider,
+            os.environ.get('FOUNDRY_MODEL_BASE_URL') if base_url is None else base_url)
+        key_variable = 'FOUNDRY_MODEL_API_KEY' if self.provider == 'cliproxyapi' else 'OPENAI_API_KEY'
+        self._api_key = (os.environ.get(key_variable, '') if api_key is None else api_key).strip()
+        default_model = DEFAULT_MODEL if self.provider == 'openai' else ''
+        self.model = (os.environ.get('FOUNDRY_MODEL_NAME', os.environ.get('FOUNDRY_OPENAI_MODEL', default_model))
+                      if model is None else model).strip()
         if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}', self.model):
             raise DomainError('MODEL_CONFIGURATION_INVALID', 'Configure a valid model identifier.')
         if self._api_key and (len(self._api_key) > 1024 or any(ord(c) < 33 or ord(c) > 126 for c in self._api_key)):
@@ -96,21 +145,30 @@ class OpenAIProvider:
         if not 0 < timeout <= TIMEOUT_SECONDS or not 1 <= max_output_tokens <= MAX_OUTPUT_TOKENS or not 1 <= max_response_bytes <= MAX_RESPONSE_BYTES:
             raise DomainError('MODEL_CONFIGURATION_INVALID', 'Model request limits exceed the supported bounds.')
         self.timeout, self.max_output_tokens, self.max_response_bytes = timeout, max_output_tokens, max_response_bytes
-        self._transport = transport or _https_transport
+        self._transport = transport or (_https_transport if self.provider == 'openai' else
+            lambda body, headers, **limits: _responses_transport(body, headers, scheme=scheme, host=host, port=port, **limits))
 
     def status(self):
-        return {'configured': bool(self._api_key), 'provider': 'openai', 'model': self.model,
+        return {'configured': bool(self._api_key), 'provider': self.provider, 'model': self.model,
+                'base_url': self.base_url, 'protocol': 'responses',
                 'limits': {'timeout_seconds': self.timeout, 'max_output_tokens': self.max_output_tokens,
                            'max_request_bytes': MAX_REQUEST_BYTES, 'max_response_bytes': self.max_response_bytes}}
 
     def generate(self, instructions, payload, schema, name):
         if not self._api_key:
-            raise DomainError('MODEL_NOT_CONFIGURED', 'Set OPENAI_API_KEY to enable model composition.', 409)
+            variable = 'FOUNDRY_MODEL_API_KEY' if self.provider == 'cliproxyapi' else 'OPENAI_API_KEY'
+            raise DomainError('MODEL_NOT_CONFIGURED', f'Set {variable} to enable the configured model provider.', 409)
         if not isinstance(instructions, str) or not instructions.strip() or not isinstance(payload, dict) or not isinstance(schema, dict):
             raise DomainError('MODEL_REQUEST_INVALID', 'The model request requires instructions, a data object and a schema.')
         if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,64}', name):
             raise DomainError('MODEL_REQUEST_INVALID', 'The structured response schema name is invalid.')
         try:
+            if self.provider == 'cliproxyapi':
+                # Compatibility proxies may not translate Responses text.format.
+                # Keep strict parsing and host validation; never strip Markdown.
+                instructions += ('\n\nReturn exactly one JSON object matching the following schema. '
+                                 'Output JSON only: no Markdown fences, commentary, or additional keys. '
+                                 'This is the required response format, not source evidence.\n' + _canonical(schema).decode())
             request = {'model': self.model, 'store': False, 'instructions': instructions,
                        'input': [{'role': 'user', 'content': [{'type': 'input_text', 'text': _canonical(payload).decode()}]}],
                        'text': {'format': {'type': 'json_schema', 'name': name, 'strict': True, 'schema': schema}},
@@ -174,12 +232,16 @@ class OpenAIProvider:
         actual_model = response.get('model')
         if not isinstance(response_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,200}', response_id) or not isinstance(actual_model, str) or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', actual_model):
             raise DomainError('MODEL_RESPONSE_INVALID', 'The model response lacks a valid receipt identity.', 502)
+        if self.provider == 'cliproxyapi' and actual_model != self.model:
+            raise DomainError('MODEL_IDENTITY_MISMATCH', 'The proxy reported a different model than the one requested.', 502,
+                              {'requested_model': self.model, 'returned_model': actual_model})
         usage = response.get('usage')
         safe_usage = {}
         if isinstance(usage, dict):
             safe_usage = {k: usage[k] for k in ('input_tokens', 'output_tokens', 'total_tokens')
                           if isinstance(usage.get(k), int) and not isinstance(usage[k], bool) and usage[k] >= 0}
-        return {'output': parsed, 'receipt': {'provider': 'openai', 'model': actual_model, 'requested_model': self.model,
+        return {'output': parsed, 'receipt': {'provider': self.provider, 'base_url': self.base_url, 'protocol': 'responses',
+                'model': actual_model, 'requested_model': self.model,
                 'response_id': response_id, 'usage': safe_usage, 'prompt_digest': _digest(body), 'response_digest': _digest(raw),
                 'output_digest': _digest(parsed), 'schema_digest': _digest(schema), 'store': False,
                 'limits': self.status()['limits']}}

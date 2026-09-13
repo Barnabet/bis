@@ -631,7 +631,9 @@ def _pdf(snapshot, nodes, path, policy, view, images):
     for node in nodes:
         anchor = re.sub(r"[^A-Za-z0-9_]", "_", node["id"])
         if node["kind"] == "rich_text":
-            story.append(tracked(escape(_text(node, snapshot["facts"])), styles["body"], anchor))
+            # Escape source text before adding renderer-owned line-break markup.
+            content = escape(_text(node, snapshot["facts"])).replace("\n", "<br/>")
+            story.append(tracked(content, styles["body"], anchor))
             mapping.append(_location(node, "static_text", f"named_destination:{anchor}", editable=False))
         elif node["kind"] in {"table", "pivot"}:
             story.append(tracked(escape(node["title"]), styles["head"], anchor))
@@ -710,10 +712,13 @@ def _pptx(snapshot, nodes, path, policy, view, images):
         tf.word_wrap = True
         tf.margin_left = tf.margin_right = Inches(.02)
         tf.margin_top = tf.margin_bottom = Inches(.02)
-        p = tf.paragraphs[0]
-        p.text = text
-        p.font.name, p.font.size, p.font.bold = "Calibri", Pt(size), bold
-        p.font.color.rgb = RGBColor.from_string(color)
+        # TextFrame preserves newline paragraph boundaries. Paragraph.text would
+        # turn them into soft breaks, which read back as vertical tabs instead.
+        tf.text = text
+        for p in tf.paragraphs:
+            p.font.name, p.font.size, p.font.bold = "Calibri", Pt(size), bold
+            p.font.color.rgb = RGBColor.from_string(color)
+            p.space_before = p.space_after = Pt(0)
         return shape
     def add_slide(title):
         slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -745,7 +750,8 @@ def _pptx(snapshot, nodes, path, policy, view, images):
         content = _text(node, snapshot["facts"])
         if len(content) > 800:
             raise ExportError("The canvas profile requires a separate layout for long prose.", "canvas_text_overflow")
-        height = max(.45, math.ceil(len(content)/130) * .25)
+        line_count = sum(max(1, math.ceil(len(line)/130)) for line in content.split("\n"))
+        height = max(.45, line_count * .25)
         textbox(first, content, .6, y, 12.05, height, 16 if node["id"] == "summary" else 13, color=INK if node["id"] == "summary" else MUTED)
         mapping.append(_location(node, "native_text", f"slide:1/shape:{len(first.shapes)}", editable=True))
         y += height + .18

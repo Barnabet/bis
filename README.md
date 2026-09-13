@@ -2,7 +2,7 @@
 
 A working local reporting application built from `Periodic_Report_System_Architecture.docx`. It materializes one typed, immutable native report and exports that same revision to DOCX, XLSX, PDF and PPTX.
 
-The registered regional revenue adapter can compare historical report/source pairs to distinguish three implemented selection policies. The included data and historical targets are synthetic. Optional OpenAI assistance proposes a policy or drafts fact-bound commentary; users review consequential decisions and every composed draft. This is bounded policy learning, not arbitrary reporting-program synthesis.
+The registered regional revenue adapter can compare historical report/source pairs to distinguish three implemented selection policies. The included data and historical targets are synthetic. Optional model assistance through OpenAI or a local CLIProxyAPI instance proposes a policy or drafts fact-bound commentary; users review consequential decisions and every composed draft. This is bounded policy learning, not arbitrary reporting-program synthesis.
 
 ## Run locally
 
@@ -30,7 +30,7 @@ For frontend development, run `npm --prefix web run dev` alongside the API. Vite
 - Candidate versions within the same report type, policy decisions, independent synthetic regression evaluation, compare-and-swap publication, frozen source-code packages, and a pinned release for each run. The active release remains selected while its replacement is reviewed.
 - Historical report/source pairs, independent target observations, a region coverage ledger, competing policy hypotheses and reconstruction evaluation. Reserved pair contents are withheld from authoring and ordinary asset access until explicitly revealed as development evidence.
 - Editable commentary creates a new immutable revision. Computed facts and prose are locked. Review acceptance creates an audited revision; it preserves earlier warnings and review findings in the acceptance history.
-- Optional OpenAI policy proposals and commentary composition through a bounded structured-response provider. Commentary uses frozen fact references and selected qualitative evidence, with deterministic checks, one repair attempt and mandatory human review. No live-provider quality result is claimed.
+- Optional policy proposals and commentary composition through a bounded Responses provider. Commentary uses frozen fact references and selected qualitative evidence, with deterministic checks, one repair attempt and mandatory human review. Live checks and their limited scope are recorded in `docs/VALIDATION.md`.
 - Persisted jobs with idempotency conflict detection, worker leases, heartbeats, stale-result fencing and cancellation. The deterministic local jobs restart safely as a unit after a crash; stages record progress, not invented percentages.
 - Four actual export adapters with per-component coverage and fidelity manifests. Exporting does not call source discovery, preparation or language generation.
 
@@ -74,13 +74,33 @@ Reserved targets and paired sources are withheld by content digest, including du
 
 ## Optional model assistance
 
-Set `OPENAI_API_KEY` and an account-supported `FOUNDRY_OPENAI_MODEL` in the server environment to enable real OpenAI requests. The workbench/API exposes configuration status without returning the credential. Deterministic hypothesis search and the existing reporting/export workflow work without a key. No live API key was configured for the recorded provider tests; those tests exercise the actual adapter through an injected transport.
+Set `OPENAI_API_KEY` and an account-supported `FOUNDRY_OPENAI_MODEL` in the server environment to enable direct OpenAI requests. To use the local CLIProxyAPI service instead:
 
-AI-assisted learning receives only the bounded hypotheses, permitted target-region evidence and explicit requirements. It proposes one implemented policy and unresolved questions; it cannot change source calculations, reference observations, publication gates or application code.
+```sh
+export FOUNDRY_MODEL_PROVIDER=cliproxyapi
+export FOUNDRY_MODEL_BASE_URL=http://127.0.0.1:8317/v1
+export FOUNDRY_MODEL_NAME=claude-opus-5
+export FOUNDRY_MODEL_API_KEY='<your local proxy client key>'
+uv run foundry serve
+```
+
+Use the proxy's client key, not its management or upstream OAuth credentials. The proxy provider never falls back to `OPENAI_API_KEY`. Configuration files matching `.env.*` are ignored by Git; they are not automatically loaded, so explicitly source a trusted local file before starting the service. The workbench/API shows the provider, endpoint, protocol and model without returning the credential. Deterministic learning and reporting/export work without a key.
+
+Model-assisted learning receives only the bounded hypotheses, permitted target-region evidence and explicit requirements. It proposes one implemented policy and unresolved questions; it cannot change source calculations, reference observations, publication gates or application code. The existing CLI/API engine value `openai` selects the configured model provider for backward compatibility.
 
 Commentary drafting receives the frozen report facts and up to five selected qualitative source files, within a smaller excerpt budget. Historical target reports and reserved evidence cannot be supplied as new-period commentary. The model has no tools and returns structured templates containing fact references. Successful drafting creates a new review-required snapshot; it never edits the original or accepts itself. Source identities, accepted structured responses, receipts and validation attempts are retained. Exporting that revision reuses its captured wording.
 
-The provider is bounded to the OpenAI Responses endpoint, no tools, 2,048 output tokens and 45 seconds per request. Composition permits at most two attempts total. Numeric-reference, exact-quotation and wording checks do not establish semantic truth; independent model grading and calibrated narrative-quality evaluation remain future work.
+The provider uses `/v1/responses`, no tools, 2,048 output tokens and 45 seconds per request. Direct OpenAI uses its fixed HTTPS origin; CLIProxyAPI URLs are restricted to loopback HTTP(S), with no redirects or protocol/model fallback. Endpoint, protocol and model participate in queued-request and captured-response identity. A proxy response reporting a different model is rejected. Its reported model is not an independent attestation of the upstream service.
+
+Some proxies accept `text.format` without enforcing its schema. Proxy requests therefore include explicit JSON-only/schema instructions; fenced or malformed JSON still fails, and application validation remains mandatory. `store:false` is sent as a request preference, not a guarantee about proxy or upstream retention. Composition permits at most two attempts total. Numeric-reference, exact-quotation and wording checks do not establish semantic truth; independent model grading and calibrated narrative-quality evaluation remain future work.
+
+To repeat the opt-in synthetic live validation with the configuration above:
+
+```sh
+uv run python scripts/validate_live_model.py --run-live
+```
+
+This creates a fresh workspace under ignored `output/cliproxyapi-live/`, runs one learning job and two commentary jobs with exactly `claude-opus-5`, then exports DOCX/XLSX/PDF/PPTX without additional model calls. It allows at most five outbound requests including repairs. The saved summary includes receipts, synthetic request bodies, retry/cache checks, prose and artifacts; it excludes credentials and headers. Passing structural checks leaves the commentary pending semantic and visual review. The script neither accepts reports nor changes the main workspace. It requires explicit opt-in and is separate from the offline test suite.
 
 ## Optional report image
 

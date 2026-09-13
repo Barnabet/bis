@@ -24,7 +24,7 @@ import type {
 import { api, identifier, messageOf, post } from "./api";
 import { Badge, ErrorNotice, KeyValue, Modal, pretty, Spinner } from "./ui";
 import { JobProgress } from "./Dialogs";
-import { ModelConfiguration } from "./ModelConfiguration";
+import { ModelConfiguration, modelProviderLabel } from "./ModelConfiguration";
 
 const exampleLabel = (example: HistoricalExample) =>
   example.label || example.period.label || example.report_filename;
@@ -838,7 +838,7 @@ export function LearningPanel({
                 Deterministic — compare supported policies
               </option>
               <option value="openai" disabled={!model?.configured}>
-                OpenAI assisted{!model?.configured ? " — not configured" : ""}
+                Model assisted{!model?.configured ? " — not configured" : ""}
               </option>
             </select>
           </label>
@@ -892,10 +892,23 @@ export function LearningPanel({
             <h3>Recorded learning result</h3>
             <Badge status="known">
               {learning.engine.startsWith("openai")
-                ? "OpenAI assisted"
+                ? "Model assisted"
                 : "Deterministic analysis"}
             </Badge>
           </div>
+          {learning.model_receipt && (
+            <p className="muted-small">
+              Recorded provider:{" "}
+              {modelProviderLabel(
+                typeof learning.model_receipt.provider === "string"
+                  ? learning.model_receipt.provider
+                  : undefined,
+              )}
+              {typeof learning.model_receipt.model === "string" && (
+                <> · {learning.model_receipt.model}</>
+              )}
+            </p>
+          )}
           {learning.requirements && (
             <details className="technical-details">
               <summary>Requirements used by this version</summary>

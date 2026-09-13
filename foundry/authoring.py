@@ -159,7 +159,7 @@ class AuthoringMixin:
         if not isinstance(requirements, str) or len(requirements.strip()) > 4000:
             raise DomainError('REQUIREMENTS_INVALID', 'Requirements allow up to 4,000 characters.')
         if engine not in {'deterministic', 'openai'}:
-            raise DomainError('LEARNING_ENGINE_INVALID', 'Choose the bounded hypothesis search or OpenAI authoring.')
+            raise DomainError('LEARNING_ENGINE_INVALID', 'Choose deterministic hypothesis search or model-assisted authoring.')
         with self.store.connect() as db:
             program = self._candidate(id, expected_digest, db)
             corpus = self.corpus(program['report_type_id'], db)
@@ -172,7 +172,7 @@ class AuthoringMixin:
             from .model_provider import status
             status_record = status()
             if not status_record['configured']:
-                raise DomainError('MODEL_NOT_CONFIGURED', 'Configure OPENAI_API_KEY and FOUNDRY_OPENAI_MODEL on the local server before AI authoring.', 409)
+                raise DomainError('MODEL_NOT_CONFIGURED', 'Configure the selected model provider and its credential on the local server before AI authoring.', 409)
             model_config = {k: v for k, v in status_record.items() if k != 'configured'}
         return self.store.enqueue('learning', f'learning:{id}', key,
                                   {'program_id': id, 'expected_digest': expected_digest, 'corpus': corpus,
@@ -204,7 +204,7 @@ class AuthoringMixin:
                         corpus_digest=payload['corpus']['digest'], corpus=payload['corpus']['entries'],
                         example_ids=[c['id'] for c in cases], created_at=now())
         if payload['engine'] == 'openai':
-            stage('Interpreting scoped evidence with OpenAI')
+            stage('Interpreting scoped evidence with the configured model')
             provider = self._captured_provider(job)
             if len(canonical({'hypotheses': analysis['hypotheses'], 'coverage': analysis['coverage']})) > 64000:
                 raise DomainError('AUTHORING_CONTEXT_LIMIT', 'The scoped model evidence exceeds 64 KB. Use fewer or shorter examples.')

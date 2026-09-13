@@ -85,6 +85,45 @@ def test_exact_attributed_causal_quote_is_reviewable_not_proven(snapshot, eviden
     assert any(f['code'] == 'CAUSAL_EVIDENCE_REVIEW' and f['severity'] == 'review' for f in result['findings'])
 
 
+@pytest.mark.parametrize('disclaimer', ['This is a source claim, not as an established cause.',
+                                       'This is presented as a source claim rather than an established cause.'])
+def test_negated_causal_disclaimer_stays_blocked_and_repair_names_outside_quote_term(snapshot, evidence, disclaimer):
+    quote = 'The renewal campaign drove the reported movement.'
+    evidence[0]['text'] = quote
+    prefix = ('Revenue reached {{revenue.current}}, and {{driver.region}} is the selected region. '
+              'According to the supplied evidence, "' + quote + '" ')
+    bad = proposal(prefix + disclaimer, ['management_note'])
+    rejected = validate_proposal(snapshot, evidence, bad)
+    assert blocks(rejected) == {'CAUSAL_CLAIM_UNSUPPORTED'} and rejected['runs'] == []
+    safe = proposal(prefix + 'This source claim remains unverified.', ['management_note'])
+    provider = StubProvider([bad, safe])
+    result = compose(snapshot, evidence, 'Quote the supplied note while preserving uncertainty.', provider)
+    repairs = provider.calls[1]['payload']['repair_errors']
+    assert len(repairs) == 1 and repairs[0]['code'] == 'CAUSAL_CLAIM_UNSUPPORTED'
+    message = repairs[0]['message']
+    assert "'cause'" in message and "'drove'" not in message
+    assert 'even when negated' in message and 'exact matching source quotation' in message
+    assert 'qualitative_evidence IDs' in message and 'According to the supplied evidence' in message
+    assert 'This source claim remains unverified.' in message
+    assert not blocks(result) and result['evidence_refs'] == ['management_note']
+    assert any(f['code'] == 'CAUSAL_EVIDENCE_REVIEW' and f['severity'] == 'review' for f in result['findings'])
+    rendered = render_runs(result['runs'], snapshot['facts'])
+    assert quote in rendered and 'This source claim remains unverified.' in rendered
+    assert 'even when negated' in provider.calls[0]['instructions']
+    assert 'not as an established cause' in provider.calls[0]['instructions']
+    assert 'This source claim remains unverified.' in provider.calls[0]['instructions']
+
+
+def test_causal_feedback_is_bounded_and_does_not_echo_unrelated_prose(snapshot):
+    terms = ' '.join('cause' + chr(ord('a') + index) * 70 for index in range(20))
+    result = validate_proposal(snapshot, [], proposal(
+        'Revenue {{revenue.current}} and {{driver.region}} include unrelatedphrase ' + terms))
+    message = next(f['message'] for f in result['findings'] if f['code'] == 'CAUSAL_CLAIM_UNSUPPORTED')
+    assert 'Additional terms omitted' in message and 'unrelatedphrase' not in message
+    assert 'a' * 33 not in message and len(message) < 850
+    assert result['runs'] == []
+
+
 @pytest.mark.parametrize('suffix,expected', [
     ('A campaign drove stronger demand.', 'CAUSAL_CLAIM_UNSUPPORTED'),
     ('According to the supplied evidence, a campaign drove stronger demand.', 'CAUSAL_CLAIM_UNSUPPORTED'),
@@ -127,6 +166,55 @@ def test_repair_is_limited_to_one_retry_with_only_validation_errors(snapshot, ev
     assert second['facts'] == provider.calls[0]['payload']['facts']
     assert snapshot == initial
     assert result['receipt']['human_review_required'] is True
+
+
+def test_live_failure_repair_identifies_currency_number_words_and_fact_citation_misuse(snapshot):
+    bad = proposal('Posted EUR revenue reached {{revenue.current}}, with {{driver.region}} selected between the two windows.',
+                   ['revenue.current', 'driver.region'])
+    provider = StubProvider([bad, proposal()])
+    result = compose(snapshot, [], 'Summarize the posted results.', provider)
+    assert len(provider.calls) == len(result['attempts']) == 2
+    repairs = {item['code']: item['message'] for item in provider.calls[1]['payload']['repair_errors']}
+    assert set(repairs) == {'NUMERIC_LITERAL', 'EVIDENCE_REFERENCE_INVALID'}
+    assert "'EUR'" in repairs['NUMERIC_LITERAL'] and "'two'" in repairs['NUMERIC_LITERAL']
+    assert 'qualitative_evidence[*].id' in repairs['EVIDENCE_REFERENCE_INVALID']
+    assert 'Fact IDs belong only in template placeholders' in repairs['EVIDENCE_REFERENCE_INVALID']
+    assert 'Use []' in repairs['EVIDENCE_REFERENCE_INVALID']
+    assert provider.calls[1]['payload']['qualitative_evidence'] == []
+    assert provider.calls[1]['payload']['facts'] == provider.calls[0]['payload']['facts']
+    assert result['evidence_refs'] == [] and result['receipt']['human_review_required'] is True
+
+
+def test_composition_prompt_distinguishes_fact_placeholders_from_qualitative_citations(snapshot):
+    provider = StubProvider([proposal()])
+    compose(snapshot, [], 'Summarize the posted results.', provider)
+    instructions = provider.calls[0]['instructions']
+    assert 'never put fact IDs in evidence_refs' in instructions
+    assert 'qualitative_evidence[*].id' in instructions
+    assert 'evidence_refs must be []' in instructions
+    assert 'including two, quarter, percent and percentage' in instructions
+    assert 'currency codes EUR/USD/GBP' in instructions
+    assert 'Fact placeholders already render their values and display units' in instructions
+
+
+@pytest.mark.parametrize('literal,offender', [('EUR', 'EUR'), ('two', 'two'), ('quarter', 'quarter'),
+                                            ('€', '€'), ('USD', 'USD'), ('%', '%'), ('²', '2')])
+def test_actionable_numeric_feedback_does_not_relax_literal_rejection(snapshot, literal, offender):
+    result = validate_proposal(snapshot, [], proposal(
+        'Revenue {{revenue.current}} and {{driver.region}} describe the reported results with ' + literal + '.'))
+    finding = next(finding for finding in result['findings'] if finding['code'] == 'NUMERIC_LITERAL')
+    assert offender in finding['message']
+    assert finding['severity'] == 'block' and result['runs'] == []
+
+
+def test_numeric_repair_feedback_is_bounded_and_omits_unrelated_prose(snapshot):
+    literals = ' '.join(str(number) for number in range(30)) + ' ' + '9' * 1000
+    result = validate_proposal(snapshot, [], proposal(
+        'Revenue {{revenue.current}} and {{driver.region}} include unrelatedphrase ' + literals))
+    message = next(finding['message'] for finding in result['findings'] if finding['code'] == 'NUMERIC_LITERAL')
+    assert 'additional tokens omitted' in message
+    assert 'unrelatedphrase' not in message and '9' * 33 not in message
+    assert len(message) < 650 and result['runs'] == []
 
 
 def test_retry_budget_exhaustion_returns_findings_and_no_partial_snapshot(snapshot):
