@@ -1,0 +1,2162 @@
+{
+  "schema_version": 1,
+  "id": "public-report-data-capability-v1",
+  "captured_on": "2026-09-13",
+  "scope": "Original public reports paired with published aggregate data; source acquisition and admission baseline, not completed report-generation evaluation.",
+  "official_hosts": [
+    "www.fmc.gov",
+    "www.ons.gov.uk",
+    "www2.census.gov"
+  ],
+  "assets": [
+    {
+      "id": "census-marts-2025-05-report",
+      "role": "report",
+      "filename": "census-marts-2025-05-report.pdf",
+      "cache_filename": "census-marts-2025-05-report.pdf",
+      "url": "https://www2.census.gov/retail/releases/historical/marts/adv2505.pdf",
+      "sha256": "1d96c3170cec8d76ddea315f0c1b6688fdb1141e0d0a00f1048c819bf2d8e9f6",
+      "size_bytes": 279408,
+      "provenance": {
+        "release_date": "2025-06-17",
+        "retrieved_at": "2026-09-13T09:54:06.807933+00:00",
+        "last_modified": "Tue, 17 Jun 2025 12:45:25 GMT",
+        "as_released": true
+      }
+    },
+    {
+      "id": "census-marts-2025-05-source",
+      "role": "source",
+      "filename": "census-marts-2025-05-source.xlsx",
+      "cache_filename": "census-marts-2025-05-source.xlsx",
+      "url": "https://www2.census.gov/retail/releases/historical/marts/rs2505.xlsx",
+      "sha256": "ca3ee103686846ed5881e38e211437fe636aaad17f5b7093144019a26c16934f",
+      "size_bytes": 33955,
+      "provenance": {
+        "release_date": "2025-06-17",
+        "retrieved_at": "2026-09-13T09:54:06.808272+00:00",
+        "last_modified": "Tue, 17 Jun 2025 12:45:25 GMT",
+        "as_released": true
+      }
+    },
+    {
+      "id": "census-marts-2025-06-report",
+      "role": "report",
+      "filename": "census-marts-2025-06-report.pdf",
+      "cache_filename": "census-marts-2025-06-report.pdf",
+      "url": "https://www2.census.gov/retail/releases/historical/marts/adv2506.pdf",
+      "sha256": "d90dbe4a3e2ec531af675830b6fca9bcca90f404fcbacf39d8e53675c91fa4d2",
+      "size_bytes": 262487,
+      "provenance": {
+        "release_date": "2025-07-17",
+        "retrieved_at": "2026-09-13T09:54:06.808358+00:00",
+        "last_modified": "Thu, 17 Jul 2025 12:45:27 GMT",
+        "as_released": true
+      }
+    },
+    {
+      "id": "census-marts-2025-06-source",
+      "role": "source",
+      "filename": "census-marts-2025-06-source.xlsx",
+      "cache_filename": "census-marts-2025-06-source.xlsx",
+      "url": "https://www2.census.gov/retail/releases/historical/marts/rs2506.xlsx",
+      "sha256": "a26a298e7cb0db56a931de885a52bef9b4a1b5febd381fd187b6c7595a60c2bb",
+      "size_bytes": 33920,
+      "provenance": {
+        "release_date": "2025-07-17",
+        "retrieved_at": "2026-09-13T09:54:06.808417+00:00",
+        "last_modified": "Thu, 17 Jul 2025 12:45:27 GMT",
+        "as_released": true
+      }
+    },
+    {
+      "id": "census-marts-2025-07-report",
+      "role": "report",
+      "filename": "census-marts-2025-07-report.pdf",
+      "cache_filename": "census-marts-2025-07-report.pdf",
+      "url": "https://www2.census.gov/retail/releases/historical/marts/adv2507.pdf",
+      "sha256": "b38c2622498a6373ea768ae707810c1c146cd4b49423ca26875c9d220e776864",
+      "size_bytes": 332811,
+      "provenance": {
+        "release_date": "2025-08-15",
+        "retrieved_at": "2026-09-13T09:54:07.252939+00:00",
+        "last_modified": "Fri, 15 Aug 2025 12:45:25 GMT",
+        "as_released": true
+      }
+    },
+    {
+      "id": "census-marts-2025-07-source",
+      "role": "source",
+      "filename": "census-marts-2025-07-source.xlsx",
+      "cache_filename": "census-marts-2025-07-source.xlsx",
+      "url": "https://www2.census.gov/retail/releases/historical/marts/rs2507.xlsx",
+      "sha256": "85a1606c70902c756903ca601a1842b723c251fd3757895a6a27550ed6032c3a",
+      "size_bytes": 33924,
+      "provenance": {
+        "release_date": "2025-08-15",
+        "retrieved_at": "2026-09-13T09:54:07.401547+00:00",
+        "last_modified": "Fri, 15 Aug 2025 12:45:25 GMT",
+        "as_released": true
+      }
+    },
+    {
+      "id": "census-marts-2025-08-report",
+      "role": "report",
+      "filename": "census-marts-2025-08-report.pdf",
+      "cache_filename": "census-marts-2025-08-report.pdf",
+      "url": "https://www2.census.gov/retail/releases/historical/marts/adv2508.pdf",
+      "sha256": "a5bee0d078b699334395cb5f9ef8a7895cf998369291b36f2e213e47e1c62cf9",
+      "size_bytes": 278933,
+      "provenance": {
+        "release_date": "2025-09-16",
+        "retrieved_at": "2026-09-13T09:54:07.508296+00:00",
+        "last_modified": "Tue, 16 Sep 2025 12:45:24 GMT",
+        "as_released": true
+      }
+    },
+    {
+      "id": "census-marts-2025-08-source",
+      "role": "source",
+      "filename": "census-marts-2025-08-source.xlsx",
+      "cache_filename": "census-marts-2025-08-source.xlsx",
+      "url": "https://www2.census.gov/retail/releases/historical/marts/rs2508.xlsx",
+      "sha256": "05fa4ce9d089e4b99321c48ad311710ac3f9a0a5f0e785a7b96e8a0687f05446",
+      "size_bytes": 33897,
+      "provenance": {
+        "release_date": "2025-09-16",
+        "retrieved_at": "2026-09-13T09:54:07.515987+00:00",
+        "last_modified": "Tue, 16 Sep 2025 12:45:24 GMT",
+        "as_released": true
+      }
+    },
+    {
+      "id": "ons-retail-sales-2025-06-report",
+      "role": "report",
+      "filename": "ons-retail-sales-2025-06-report.pdf",
+      "cache_filename": "ons-retail-sales-2025-06-report.pdf",
+      "url": "https://www.ons.gov.uk/businessindustryandtrade/retailindustry/bulletins/retailsales/june2025/pdf",
+      "sha256": "706c8e5c9815e5c5423ca5ae59e7508c180c2c10b0f45c621b9147f66c527902",
+      "size_bytes": 798188,
+      "provenance": {
+        "release_date": "2025-07-25",
+        "date_superseded": "2025-09-05",
+        "retrieved_at": "2026-09-13T09:58:20.202371+00:00"
+      }
+    },
+    {
+      "id": "ons-retail-sales-2025-06-source",
+      "role": "source",
+      "filename": "ons-retail-sales-2025-06-source.csv",
+      "cache_filename": "ons-retail-sales-2025-06-source.csv",
+      "url": "https://www.ons.gov.uk/file?uri=%2Fbusinessindustryandtrade%2Fretailindustry%2Fdatasets%2Fretailsales%2Fcurrent%2Fprevious%2Fv117%2Fdrsi.csv",
+      "sha256": "e2671aeb8397ce44ce6b0c412c2675c93bef264c1b183340846ef3ed2e5d40f1",
+      "size_bytes": 2481760,
+      "provenance": {
+        "release_date": "2025-07-25",
+        "date_superseded": "2025-09-05",
+        "retrieved_at": "2026-09-13T09:58:20.204261+00:00"
+      }
+    },
+    {
+      "id": "ons-retail-sales-2025-07-report",
+      "role": "report",
+      "filename": "ons-retail-sales-2025-07-report.pdf",
+      "cache_filename": "ons-retail-sales-2025-07-report.pdf",
+      "url": "https://www.ons.gov.uk/businessindustryandtrade/retailindustry/bulletins/retailsales/july2025/pdf",
+      "sha256": "da10b5af5e46b5ae6eafe8f8f371e12cb3f1a37732cdbe67686c0309e679f82f",
+      "size_bytes": 1084765,
+      "provenance": {
+        "release_date": "2025-09-05",
+        "date_superseded": "2025-09-19",
+        "retrieved_at": "2026-09-13T09:58:20.215234+00:00"
+      }
+    },
+    {
+      "id": "ons-retail-sales-2025-07-source",
+      "role": "source",
+      "filename": "ons-retail-sales-2025-07-source.csv",
+      "cache_filename": "ons-retail-sales-2025-07-source.csv",
+      "url": "https://www.ons.gov.uk/file?uri=%2Fbusinessindustryandtrade%2Fretailindustry%2Fdatasets%2Fretailsales%2Fcurrent%2Fprevious%2Fv118%2Fdrsi.csv",
+      "sha256": "c1f217ea71a5055308d52536e4dce38586d6a6d133bf5b061a2b816248dda148",
+      "size_bytes": 2488321,
+      "provenance": {
+        "release_date": "2025-09-05",
+        "date_superseded": "2025-09-19",
+        "retrieved_at": "2026-09-13T09:58:20.219434+00:00"
+      }
+    },
+    {
+      "id": "ons-retail-sales-2025-08-report",
+      "role": "report",
+      "filename": "ons-retail-sales-2025-08-report.pdf",
+      "cache_filename": "ons-retail-sales-2025-08-report.pdf",
+      "url": "https://www.ons.gov.uk/businessindustryandtrade/retailindustry/bulletins/retailsales/august2025/pdf",
+      "sha256": "a0b38ad5dc9bcf78e9010c98aa27067a9d4175718c09f45bbcc6323560e52c99",
+      "size_bytes": 831217,
+      "provenance": {
+        "release_date": "2025-09-19",
+        "date_superseded": "2025-10-24",
+        "retrieved_at": "2026-09-13T09:58:20.224383+00:00"
+      }
+    },
+    {
+      "id": "ons-retail-sales-2025-08-source",
+      "role": "source",
+      "filename": "ons-retail-sales-2025-08-source.csv",
+      "cache_filename": "ons-retail-sales-2025-08-source.csv",
+      "url": "https://www.ons.gov.uk/file?uri=%2Fbusinessindustryandtrade%2Fretailindustry%2Fdatasets%2Fretailsales%2Fcurrent%2Fprevious%2Fv119%2Fdrsi.csv",
+      "sha256": "de2c303fc5cf94b7e1f979f01dfac6e9d65b7a8e609e4e87896fa14e07a789a9",
+      "size_bytes": 2494500,
+      "provenance": {
+        "release_date": "2025-09-19",
+        "date_superseded": "2025-10-24",
+        "retrieved_at": "2026-09-13T09:58:20.883667+00:00"
+      }
+    },
+    {
+      "id": "ons-retail-sales-2025-09-report",
+      "role": "report",
+      "filename": "ons-retail-sales-2025-09-report.pdf",
+      "cache_filename": "ons-retail-sales-2025-09-report.pdf",
+      "url": "https://www.ons.gov.uk/businessindustryandtrade/retailindustry/bulletins/retailsales/september2025/pdf",
+      "sha256": "f21590fbe597352f9e483eb842e5795b803e1f95f081158f351ae17bac8e7ab6",
+      "size_bytes": 812215,
+      "provenance": {
+        "release_date": "2025-10-24",
+        "date_superseded": "2025-11-21",
+        "retrieved_at": "2026-09-13T09:58:30.089581+00:00"
+      }
+    },
+    {
+      "id": "ons-retail-sales-2025-09-source",
+      "role": "source",
+      "filename": "ons-retail-sales-2025-09-source.csv",
+      "cache_filename": "ons-retail-sales-2025-09-source.csv",
+      "url": "https://www.ons.gov.uk/file?uri=%2Fbusinessindustryandtrade%2Fretailindustry%2Fdatasets%2Fretailsales%2Fcurrent%2Fprevious%2Fv120%2Fdrsi.csv",
+      "sha256": "6444d94da8b7ab58b7e189e268d43bb78b78788c91a1c2b861c5f50008faa16f",
+      "size_bytes": 2502867,
+      "provenance": {
+        "release_date": "2025-10-24",
+        "date_superseded": "2025-11-21",
+        "retrieved_at": "2026-09-13T09:58:34.753258+00:00"
+      }
+    },
+    {
+      "id": "fmc-cfs-2025-source",
+      "role": "source",
+      "filename": "fmc-cfs-2025-source.xlsx",
+      "cache_filename": "fmc-cfs-2025-source.xlsx",
+      "url": "https://www.fmc.gov/wp-content/uploads/2026/08/CFS_2025_Data.xlsx",
+      "sha256": "1db980d0cc797b566d8b4476f1ed5afb4855eaf648bfdb5b82d92f745cf00596",
+      "size_bytes": 27159,
+      "provenance": {
+        "retrieved_at": "2026-09-13T09:54:41.588939+00:00",
+        "last_modified": "Fri, 07 Aug 2026 14:58:23 GMT",
+        "as_released": false
+      }
+    },
+    {
+      "id": "fmc-cfs-2025-q1-report",
+      "role": "report",
+      "filename": "fmc-cfs-2025-q1-report.pdf",
+      "cache_filename": "fmc-cfs-2025-q1-report.pdf",
+      "url": "https://www.fmc.gov/wp-content/uploads/2026/08/Containerized-Freight-Statistics-Q1-2025-updated.pdf",
+      "sha256": "b88b995d7d377da5b1a6f2d6afc07940818e4c8c150ead96c8904df76dcde831",
+      "size_bytes": 1035474,
+      "provenance": {
+        "retrieved_at": "2026-09-13T09:54:41.588939+00:00",
+        "last_modified": "Fri, 07 Aug 2026 14:58:23 GMT",
+        "as_released": false
+      }
+    },
+    {
+      "id": "fmc-cfs-2025-q2-report",
+      "role": "report",
+      "filename": "fmc-cfs-2025-q2-report.pdf",
+      "cache_filename": "fmc-cfs-2025-q2-report.pdf",
+      "url": "https://www.fmc.gov/wp-content/uploads/2026/08/Containerized-Freight-Statistics-Q2-2025-updated.pdf",
+      "sha256": "bd544435e9e24836d074c3f030396e77beec8a8aa5c619697790c1bcafb62b5b",
+      "size_bytes": 1189835,
+      "provenance": {
+        "retrieved_at": "2026-09-13T09:54:41.588939+00:00",
+        "last_modified": "Fri, 07 Aug 2026 14:58:24 GMT",
+        "as_released": false
+      }
+    },
+    {
+      "id": "fmc-cfs-2025-q3-report",
+      "role": "report",
+      "filename": "fmc-cfs-2025-q3-report.pdf",
+      "cache_filename": "fmc-cfs-2025-q3-report.pdf",
+      "url": "https://www.fmc.gov/wp-content/uploads/2026/08/Containerized-Freight-Statistics-Q3-2025.pdf",
+      "sha256": "535671133b81aad208b8babe53c333527a61f3ca009cc113eb9399ac0adcf84d",
+      "size_bytes": 1138697,
+      "provenance": {
+        "retrieved_at": "2026-09-13T09:54:41.588939+00:00",
+        "last_modified": "Fri, 07 Aug 2026 14:58:21 GMT",
+        "as_released": false
+      }
+    },
+    {
+      "id": "fmc-cfs-2025-q4-report",
+      "role": "report",
+      "filename": "fmc-cfs-2025-q4-report.pdf",
+      "cache_filename": "fmc-cfs-2025-q4-report.pdf",
+      "url": "https://www.fmc.gov/wp-content/uploads/2026/08/Containerized-Freight-Statistics-Q4-2025.pdf",
+      "sha256": "c85992953899c9c4f535f0d0ef9bcf392dc391a8861e58b731f0c760a9f22e37",
+      "size_bytes": 1202933,
+      "provenance": {
+        "retrieved_at": "2026-09-13T09:54:41.588939+00:00",
+        "last_modified": "Fri, 07 Aug 2026 14:58:21 GMT",
+        "as_released": false
+      }
+    }
+  ],
+  "corpora": [
+    {
+      "id": "census_marts",
+      "publisher": "U.S. Census Bureau",
+      "title": "Advance Monthly Sales for Retail and Food Services",
+      "landing_url": "https://www.census.gov/retail/marts/historic_releases.html",
+      "units": [
+        "USD million",
+        "USD billion",
+        "percent"
+      ],
+      "vintage_status": "Four matching archived monthly release vintages",
+      "data_level": "Published survey estimates; not respondent transactions",
+      "required_capabilities": [
+        "Census multi-sheet table mapping and USD unit scaling",
+        "Adjustment basis and preliminary/revised value identities",
+        "Suppressed and unavailable cells distinct from zero",
+        "Report headline/table/footnote observation mapping"
+      ],
+      "cases": [
+        {
+          "id": "census-marts-2025-05",
+          "period": "2025-05",
+          "release_date": "2025-06-17",
+          "report_asset": "census-marts-2025-05-report",
+          "data_assets": [
+            "census-marts-2025-05-source"
+          ],
+          "verified_source_checks": [
+            {
+              "metric": "sales_usd_billions",
+              "pdf_page": 1,
+              "expected_from_published_report": "715.4",
+              "unit": "USD billion",
+              "xlsx_cell": {
+                "sheet": "Table 1.",
+                "cell": "J12",
+                "raw_value": 715417
+              },
+              "recomputed_from_table1": "715.4",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "month_on_month_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "-0.9",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "C15",
+                "raw_value": -0.9
+              },
+              "recomputed_from_table1": "-0.9",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "3.3",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D15",
+                "raw_value": 3.3
+              },
+              "recomputed_from_table1": "3.3",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "rolling_three_month_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "4.5",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "H15",
+                "raw_value": 4.5
+              },
+              "recomputed_from_table1": null,
+              "independent_arithmetic": false,
+              "passed": true
+            },
+            {
+              "metric": "retail_month_on_month_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "-0.9",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "C21",
+                "raw_value": -0.9
+              },
+              "recomputed_from_table1": "-0.9",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "retail_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "3.0",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D21",
+                "raw_value": 3
+              },
+              "recomputed_from_table1": "3.0",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "nonstore_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "8.3",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D51",
+                "raw_value": 8.3
+              },
+              "recomputed_from_table1": "8.3",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "food_services_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "5.3",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D53",
+                "raw_value": 5.3
+              },
+              "recomputed_from_table1": "5.3",
+              "independent_arithmetic": true,
+              "passed": true
+            }
+          ]
+        },
+        {
+          "id": "census-marts-2025-06",
+          "period": "2025-06",
+          "release_date": "2025-07-17",
+          "report_asset": "census-marts-2025-06-report",
+          "data_assets": [
+            "census-marts-2025-06-source"
+          ],
+          "verified_source_checks": [
+            {
+              "metric": "sales_usd_billions",
+              "pdf_page": 1,
+              "expected_from_published_report": "720.1",
+              "unit": "USD billion",
+              "xlsx_cell": {
+                "sheet": "Table 1.",
+                "cell": "J12",
+                "raw_value": 720106
+              },
+              "recomputed_from_table1": "720.1",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "month_on_month_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "0.6",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "C15",
+                "raw_value": 0.6
+              },
+              "recomputed_from_table1": "0.6",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "3.9",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D15",
+                "raw_value": 3.9
+              },
+              "recomputed_from_table1": "3.9",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "rolling_three_month_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "4.1",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "H15",
+                "raw_value": 4.1
+              },
+              "recomputed_from_table1": null,
+              "independent_arithmetic": false,
+              "passed": true
+            },
+            {
+              "metric": "retail_month_on_month_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "0.6",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "C21",
+                "raw_value": 0.6
+              },
+              "recomputed_from_table1": "0.6",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "retail_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "3.5",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D21",
+                "raw_value": 3.5
+              },
+              "recomputed_from_table1": "3.5",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "nonstore_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "4.5",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D51",
+                "raw_value": 4.5
+              },
+              "recomputed_from_table1": "4.5",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "food_services_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "6.6",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D53",
+                "raw_value": 6.6
+              },
+              "recomputed_from_table1": "6.6",
+              "independent_arithmetic": true,
+              "passed": true
+            }
+          ]
+        },
+        {
+          "id": "census-marts-2025-07",
+          "period": "2025-07",
+          "release_date": "2025-08-15",
+          "report_asset": "census-marts-2025-07-report",
+          "data_assets": [
+            "census-marts-2025-07-source"
+          ],
+          "verified_source_checks": [
+            {
+              "metric": "sales_usd_billions",
+              "pdf_page": 1,
+              "expected_from_published_report": "726.3",
+              "unit": "USD billion",
+              "xlsx_cell": {
+                "sheet": "Table 1.",
+                "cell": "J12",
+                "raw_value": 726283
+              },
+              "recomputed_from_table1": "726.3",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "month_on_month_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "0.5",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "C15",
+                "raw_value": 0.5
+              },
+              "recomputed_from_table1": "0.5",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "3.9",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D15",
+                "raw_value": 3.9
+              },
+              "recomputed_from_table1": "3.9",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "rolling_three_month_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "3.9",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "H15",
+                "raw_value": 3.9
+              },
+              "recomputed_from_table1": null,
+              "independent_arithmetic": false,
+              "passed": true
+            },
+            {
+              "metric": "retail_month_on_month_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "0.7",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "C21",
+                "raw_value": 0.7
+              },
+              "recomputed_from_table1": "0.7",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "retail_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "3.7",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D21",
+                "raw_value": 3.7
+              },
+              "recomputed_from_table1": "3.7",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "nonstore_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "8.0",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D51",
+                "raw_value": 8
+              },
+              "recomputed_from_table1": "8.0",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "food_services_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "5.6",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D53",
+                "raw_value": 5.6
+              },
+              "recomputed_from_table1": "5.6",
+              "independent_arithmetic": true,
+              "passed": true
+            }
+          ]
+        },
+        {
+          "id": "census-marts-2025-08",
+          "period": "2025-08",
+          "release_date": "2025-09-16",
+          "report_asset": "census-marts-2025-08-report",
+          "data_assets": [
+            "census-marts-2025-08-source"
+          ],
+          "verified_source_checks": [
+            {
+              "metric": "sales_usd_billions",
+              "pdf_page": 1,
+              "expected_from_published_report": "732.0",
+              "unit": "USD billion",
+              "xlsx_cell": {
+                "sheet": "Table 1.",
+                "cell": "J12",
+                "raw_value": 732010
+              },
+              "recomputed_from_table1": "732.0",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "month_on_month_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "0.6",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "C15",
+                "raw_value": 0.6
+              },
+              "recomputed_from_table1": "0.6",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "5.0",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D15",
+                "raw_value": 5
+              },
+              "recomputed_from_table1": "5.0",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "rolling_three_month_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "4.5",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "H15",
+                "raw_value": 4.5
+              },
+              "recomputed_from_table1": null,
+              "independent_arithmetic": false,
+              "passed": true
+            },
+            {
+              "metric": "retail_month_on_month_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "0.6",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "C21",
+                "raw_value": 0.6
+              },
+              "recomputed_from_table1": "0.6",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "retail_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "4.8",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D21",
+                "raw_value": 4.8
+              },
+              "recomputed_from_table1": "4.8",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "nonstore_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "10.1",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D51",
+                "raw_value": 10.1
+              },
+              "recomputed_from_table1": "10.1",
+              "independent_arithmetic": true,
+              "passed": true
+            },
+            {
+              "metric": "food_services_year_on_year_pct",
+              "pdf_page": 1,
+              "expected_from_published_report": "6.5",
+              "unit": "percent",
+              "xlsx_cell": {
+                "sheet": "Table 2.",
+                "cell": "D53",
+                "raw_value": 6.5
+              },
+              "recomputed_from_table1": "6.5",
+              "independent_arithmetic": true,
+              "passed": true
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "Tables are published estimates, not raw survey microdata, so these pairs cannot independently validate Census sampling estimators, response weighting or seasonal-adjustment algorithms.",
+        "A single workbook does not include all six level months needed to recompute its rolling-three-month year-on-year headline. That claim is directly published in Table2 H15.",
+        "Reports and tables overlap: independent arithmetic checks should compute from Table1 levels, not count copying Table2 output as independent formula validation.",
+        "Public reports could be memorized by a language model; use hidden future periods plus counterfactual input mutations to demonstrate dependence on supplied data.",
+        "Current Report Foundry posted-EUR transaction adapter is a different contract. No claim is made that these workbooks can currently generate a full Census report.",
+        "May–August were selected after the April25,2025 annual revision/restatement; earlier-vintage cases would additionally test the NAICS/employer-only scope transition."
+      ],
+      "revision_examples": [
+        {
+          "reference_period": "2025-06",
+          "advance_release_date": "2025-07-17",
+          "advance_usd_millions": 720106,
+          "advance_xlsx": "rs2506.xlsx / 'Table 1.'!J12",
+          "later_release_date": "2025-08-15",
+          "later_usd_millions": 722571,
+          "later_xlsx": "rs2507.xlsx / 'Table 1.'!K12",
+          "reported_growth_initial_pct": "0.6",
+          "reported_growth_revised_pct": "0.9"
+        },
+        {
+          "reference_period": "2025-07",
+          "advance_release_date": "2025-08-15",
+          "advance_usd_millions": 726283,
+          "advance_xlsx": "rs2507.xlsx / 'Table 1.'!J12",
+          "later_release_date": "2025-09-16",
+          "later_usd_millions": 727414,
+          "later_xlsx": "rs2508.xlsx / 'Table 1.'!K12",
+          "reported_growth_initial_pct": "0.5",
+          "reported_growth_revised_pct": "0.6"
+        }
+      ],
+      "rights_and_access": {
+        "public_downloads": "The agency publishes these reports and tables openly without credentials.",
+        "source_attribution": "Credit the U.S. Census Bureau for the original data and distinguish our derived analysis; the agency states conclusions are the performing party's responsibility.",
+        "citation_policy_url": "https://www.census.gov/about/policies/citation.html",
+        "government_work_policy_url": "https://www2.census.gov/foia/ds_policies/ds027.pdf",
+        "copyright_caveat": "Census policy says employee-created works generally lack US copyright protection, but foreign-country and nonemployee-work rights can differ. This is not a claim that every logo or third-party element is unrestricted worldwide.",
+        "microdata_confidentiality_url": "https://www.census.gov/retail/marts/how_surveys_are_collected.html",
+        "reproducibility_limit_url": "https://www.census.gov/about/policies/quality/guidelines/transparency.html"
+      }
+    },
+    {
+      "id": "ons_retail",
+      "publisher": "Office for National Statistics",
+      "title": "Retail sales, Great Britain",
+      "landing_url": "https://www.ons.gov.uk/businessindustryandtrade/retailindustry/datasets/retailsales/current",
+      "units": [
+        "Index",
+        "percent",
+        "GBP amounts in related series"
+      ],
+      "vintage_status": "Full historical DRSI CSV versions v117-v120; release dates checked internally",
+      "data_level": "Published weighted/adjusted aggregate series; not retailer microdata",
+      "required_capabilities": [
+        "Wide time-series CSV metadata and stable series identifiers",
+        "Value versus volume and adjustment basis",
+        "Release-vintage corrections and index rebasing",
+        "Rolling windows and report observation mapping"
+      ],
+      "cases": [
+        {
+          "id": "ons-retail-sales-2025-06",
+          "period": "2025-06",
+          "release_date": "2025-07-25",
+          "report_asset": "ons-retail-sales-2025-06-report",
+          "data_assets": [
+            "ons-retail-sales-2025-06-source"
+          ],
+          "vintage_verification": {
+            "archive_date_means": "Date superseded, not publication date",
+            "archive_date_superseded": "2025-09-05",
+            "internal_csv_release_dates": [
+              "25-07-2025"
+            ],
+            "latest_csv_month": "2025 JUN",
+            "series_count": 621,
+            "csv_rows_including_metadata": 644,
+            "row_grain": "One time-period label per row; separate annual, quarterly and monthly rows coexist",
+            "column_grain": "One ONS CDID series per column",
+            "index_reference_year": 2022,
+            "reference_index": "100",
+            "j5ek_reference_year_annual_value": "100.0",
+            "pdf_page_count": 99,
+            "pdf_first_page_period_and_release_date_verified": true,
+            "pdf_scope": "Published bulletin plus statistical reference-table appendix",
+            "status": "matched"
+          },
+          "verified_source_checks": [
+            {
+              "claim": "Retail volume, month on previous month",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EC",
+              "csv_row_label": "2025 JUN",
+              "csv_column_1_based": 417,
+              "csv_row_1_based": 644,
+              "series_title": "RSI:Month on prev month % change:All Business All retail inc fuel VOL SA",
+              "declared_report_value": "0.9",
+              "csv_value": "0.9",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, three months on previous three months",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EG",
+              "csv_row_label": "2025 JUN",
+              "csv_column_1_based": 418,
+              "csv_row_1_based": 644,
+              "series_title": "RSI:Rolling 3mnth on prev 3mnth %change:All Business All retail inc fuel VOL SA",
+              "declared_report_value": "0.2",
+              "csv_value": "0.2",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, same month a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EB",
+              "csv_row_label": "2025 JUN",
+              "csv_column_1_based": 416,
+              "csv_row_1_based": 644,
+              "series_title": "RSI:All retail inc fuel:All Business:VOL SA:% change on same month a year ago",
+              "declared_report_value": "1.7",
+              "csv_value": "1.7",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, three months on same three months a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EH",
+              "csv_row_label": "2025 JUN",
+              "csv_column_1_based": 419,
+              "csv_row_1_based": 644,
+              "series_title": "RSI:All retail inc fuel:All Business:VOL SA:Rolling 3m on same 3m a year ago %",
+              "declared_report_value": "1.8",
+              "csv_value": "1.8",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online retail value, month on previous month",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "KP8P",
+              "csv_row_label": "2025 JUN",
+              "csv_column_1_based": 572,
+              "csv_row_1_based": 644,
+              "series_title": "RSI:Internet:Month on prev month %change:All Business All retail ex fuel VAL SA",
+              "declared_report_value": "2.3",
+              "csv_value": "2.3",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online retail value, same month a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "KP8H",
+              "csv_row_label": "2025 JUN",
+              "csv_column_1_based": 564,
+              "csv_row_1_based": 644,
+              "series_title": "RSI:Internet:All retail ex fuelAll Business:VAL SA:% change month a year ago",
+              "declared_report_value": "4.5",
+              "csv_value": "4.5",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online share of retail spending",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "MS6Y",
+              "csv_row_label": "2025 JUN",
+              "csv_column_1_based": 597,
+              "csv_row_1_based": 644,
+              "series_title": "RSI: Internet: All Retailing excl auto fuel: All Bus: SA: proportion of retail",
+              "declared_report_value": "27.8",
+              "csv_value": "27.8",
+              "unit": "percent_share",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Previous month volume growth as revised in this release",
+              "cdid": "J5EC",
+              "csv_row_label": "2025 MAY",
+              "csv_column_1_based": 417,
+              "csv_row_1_based": 643,
+              "declared_report_value": "-2.8",
+              "csv_value": "-2.8",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            }
+          ]
+        },
+        {
+          "id": "ons-retail-sales-2025-07",
+          "period": "2025-07",
+          "release_date": "2025-09-05",
+          "report_asset": "ons-retail-sales-2025-07-report",
+          "data_assets": [
+            "ons-retail-sales-2025-07-source"
+          ],
+          "vintage_verification": {
+            "archive_date_means": "Date superseded, not publication date",
+            "archive_date_superseded": "2025-09-19",
+            "internal_csv_release_dates": [
+              "05-09-2025"
+            ],
+            "latest_csv_month": "2025 JUL",
+            "series_count": 621,
+            "csv_rows_including_metadata": 645,
+            "row_grain": "One time-period label per row; separate annual, quarterly and monthly rows coexist",
+            "column_grain": "One ONS CDID series per column",
+            "index_reference_year": 2022,
+            "reference_index": "100",
+            "j5ek_reference_year_annual_value": "100.0",
+            "pdf_page_count": 104,
+            "pdf_first_page_period_and_release_date_verified": true,
+            "pdf_scope": "Published bulletin plus statistical reference-table appendix",
+            "status": "matched"
+          },
+          "verified_source_checks": [
+            {
+              "claim": "Retail volume, month on previous month",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EC",
+              "csv_row_label": "2025 JUL",
+              "csv_column_1_based": 417,
+              "csv_row_1_based": 645,
+              "series_title": "RSI:Month on prev month % change:All Business All retail inc fuel VOL SA",
+              "declared_report_value": "0.6",
+              "csv_value": "0.6",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, three months on previous three months",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EG",
+              "csv_row_label": "2025 JUL",
+              "csv_column_1_based": 418,
+              "csv_row_1_based": 645,
+              "series_title": "RSI:Rolling 3mnth on prev 3mnth %change:All Business All retail inc fuel VOL SA",
+              "declared_report_value": "-0.6",
+              "csv_value": "-0.6",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, same month a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EB",
+              "csv_row_label": "2025 JUL",
+              "csv_column_1_based": 416,
+              "csv_row_1_based": 645,
+              "series_title": "RSI:All retail inc fuel:All Business:VOL SA:% change on same month a year ago",
+              "declared_report_value": "1.1",
+              "csv_value": "1.1",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, three months on same three months a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EH",
+              "csv_row_label": "2025 JUL",
+              "csv_column_1_based": 419,
+              "csv_row_1_based": 645,
+              "series_title": "RSI:All retail inc fuel:All Business:VOL SA:Rolling 3m on same 3m a year ago %",
+              "declared_report_value": "0.4",
+              "csv_value": "0.4",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online retail value, month on previous month",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "KP8P",
+              "csv_row_label": "2025 JUL",
+              "csv_column_1_based": 572,
+              "csv_row_1_based": 645,
+              "series_title": "RSI:Internet:Month on prev month %change:All Business All retail ex fuel VAL SA",
+              "declared_report_value": "2.0",
+              "csv_value": "2.0",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online retail value, same month a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "KP8H",
+              "csv_row_label": "2025 JUL",
+              "csv_column_1_based": 564,
+              "csv_row_1_based": 645,
+              "series_title": "RSI:Internet:All retail ex fuelAll Business:VAL SA:% change month a year ago",
+              "declared_report_value": "3.7",
+              "csv_value": "3.7",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online share of retail spending",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "MS6Y",
+              "csv_row_label": "2025 JUL",
+              "csv_column_1_based": 597,
+              "csv_row_1_based": 645,
+              "series_title": "RSI: Internet: All Retailing excl auto fuel: All Bus: SA: proportion of retail",
+              "declared_report_value": "27.8",
+              "csv_value": "27.8",
+              "unit": "percent_share",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Previous month volume growth as revised in this release",
+              "cdid": "J5EC",
+              "csv_row_label": "2025 JUN",
+              "csv_column_1_based": 417,
+              "csv_row_1_based": 644,
+              "declared_report_value": "0.3",
+              "csv_value": "0.3",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            }
+          ]
+        },
+        {
+          "id": "ons-retail-sales-2025-08",
+          "period": "2025-08",
+          "release_date": "2025-09-19",
+          "report_asset": "ons-retail-sales-2025-08-report",
+          "data_assets": [
+            "ons-retail-sales-2025-08-source"
+          ],
+          "vintage_verification": {
+            "archive_date_means": "Date superseded, not publication date",
+            "archive_date_superseded": "2025-10-24",
+            "internal_csv_release_dates": [
+              "19-09-2025"
+            ],
+            "latest_csv_month": "2025 AUG",
+            "series_count": 621,
+            "csv_rows_including_metadata": 646,
+            "row_grain": "One time-period label per row; separate annual, quarterly and monthly rows coexist",
+            "column_grain": "One ONS CDID series per column",
+            "index_reference_year": 2023,
+            "reference_index": "100",
+            "j5ek_reference_year_annual_value": "100.0",
+            "pdf_page_count": 100,
+            "pdf_first_page_period_and_release_date_verified": true,
+            "pdf_scope": "Published bulletin plus statistical reference-table appendix",
+            "status": "matched"
+          },
+          "verified_source_checks": [
+            {
+              "claim": "Retail volume, month on previous month",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EC",
+              "csv_row_label": "2025 AUG",
+              "csv_column_1_based": 417,
+              "csv_row_1_based": 646,
+              "series_title": "RSI:Month on prev month % change:All Business All retail inc fuel VOL SA",
+              "declared_report_value": "0.5",
+              "csv_value": "0.5",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, three months on previous three months",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EG",
+              "csv_row_label": "2025 AUG",
+              "csv_column_1_based": 418,
+              "csv_row_1_based": 646,
+              "series_title": "RSI:Rolling 3mnth on prev 3mnth %change:All Business All retail inc fuel VOL SA",
+              "declared_report_value": "-0.1",
+              "csv_value": "-0.1",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, same month a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EB",
+              "csv_row_label": "2025 AUG",
+              "csv_column_1_based": 416,
+              "csv_row_1_based": 646,
+              "series_title": "RSI:All retail inc fuel:All Business:VOL SA:% change on same month a year ago",
+              "declared_report_value": "0.7",
+              "csv_value": "0.7",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, three months on same three months a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EH",
+              "csv_row_label": "2025 AUG",
+              "csv_column_1_based": 419,
+              "csv_row_1_based": 646,
+              "series_title": "RSI:All retail inc fuel:All Business:VOL SA:Rolling 3m on same 3m a year ago %",
+              "declared_report_value": "0.8",
+              "csv_value": "0.8",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online retail value, month on previous month",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "KP8P",
+              "csv_row_label": "2025 AUG",
+              "csv_column_1_based": 572,
+              "csv_row_1_based": 646,
+              "series_title": "RSI:Internet:Month on prev month %change:All Business All retail ex fuel VAL SA",
+              "declared_report_value": "0.4",
+              "csv_value": "0.4",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online retail value, same month a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "KP8H",
+              "csv_row_label": "2025 AUG",
+              "csv_column_1_based": 564,
+              "csv_row_1_based": 646,
+              "series_title": "RSI:Internet:All retail ex fuelAll Business:VAL SA:% change month a year ago",
+              "declared_report_value": "4.7",
+              "csv_value": "4.7",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online share of retail spending",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "MS6Y",
+              "csv_row_label": "2025 AUG",
+              "csv_column_1_based": 597,
+              "csv_row_1_based": 646,
+              "series_title": "RSI: Internet: All Retailing excl auto fuel: All Bus: SA: proportion of retail",
+              "declared_report_value": "27.6",
+              "csv_value": "27.6",
+              "unit": "percent_share",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Previous month volume growth as revised in this release",
+              "cdid": "J5EC",
+              "csv_row_label": "2025 JUL",
+              "csv_column_1_based": 417,
+              "csv_row_1_based": 645,
+              "declared_report_value": "0.5",
+              "csv_value": "0.5",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            }
+          ]
+        },
+        {
+          "id": "ons-retail-sales-2025-09",
+          "period": "2025-09",
+          "release_date": "2025-10-24",
+          "report_asset": "ons-retail-sales-2025-09-report",
+          "data_assets": [
+            "ons-retail-sales-2025-09-source"
+          ],
+          "vintage_verification": {
+            "archive_date_means": "Date superseded, not publication date",
+            "archive_date_superseded": "2025-11-21",
+            "internal_csv_release_dates": [
+              "24-10-2025"
+            ],
+            "latest_csv_month": "2025 SEP",
+            "series_count": 621,
+            "csv_rows_including_metadata": 648,
+            "row_grain": "One time-period label per row; separate annual, quarterly and monthly rows coexist",
+            "column_grain": "One ONS CDID series per column",
+            "index_reference_year": 2023,
+            "reference_index": "100",
+            "j5ek_reference_year_annual_value": "100.0",
+            "pdf_page_count": 98,
+            "pdf_first_page_period_and_release_date_verified": true,
+            "pdf_scope": "Published bulletin plus statistical reference-table appendix",
+            "status": "matched"
+          },
+          "verified_source_checks": [
+            {
+              "claim": "Retail volume, month on previous month",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EC",
+              "csv_row_label": "2025 SEP",
+              "csv_column_1_based": 417,
+              "csv_row_1_based": 648,
+              "series_title": "RSI:Month on prev month % change:All Business All retail inc fuel VOL SA",
+              "declared_report_value": "0.5",
+              "csv_value": "0.5",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, three months on previous three months",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EG",
+              "csv_row_label": "2025 SEP",
+              "csv_column_1_based": 418,
+              "csv_row_1_based": 648,
+              "series_title": "RSI:Rolling 3mnth on prev 3mnth %change:All Business All retail inc fuel VOL SA",
+              "declared_report_value": "0.9",
+              "csv_value": "0.9",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, same month a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EB",
+              "csv_row_label": "2025 SEP",
+              "csv_column_1_based": 416,
+              "csv_row_1_based": 648,
+              "series_title": "RSI:All retail inc fuel:All Business:VOL SA:% change on same month a year ago",
+              "declared_report_value": "1.5",
+              "csv_value": "1.5",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Retail volume, three months on same three months a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "J5EH",
+              "csv_row_label": "2025 SEP",
+              "csv_column_1_based": 419,
+              "csv_row_1_based": 648,
+              "series_title": "RSI:All retail inc fuel:All Business:VOL SA:Rolling 3m on same 3m a year ago %",
+              "declared_report_value": "1.0",
+              "csv_value": "1.0",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online retail value, month on previous month",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "KP8P",
+              "csv_row_label": "2025 SEP",
+              "csv_column_1_based": 572,
+              "csv_row_1_based": 648,
+              "series_title": "RSI:Internet:Month on prev month %change:All Business All retail ex fuel VAL SA",
+              "declared_report_value": "1.4",
+              "csv_value": "1.4",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online retail value, same month a year earlier",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "KP8H",
+              "csv_row_label": "2025 SEP",
+              "csv_column_1_based": 564,
+              "csv_row_1_based": 648,
+              "series_title": "RSI:Internet:All retail ex fuelAll Business:VAL SA:% change month a year ago",
+              "declared_report_value": "5.6",
+              "csv_value": "5.6",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Online share of retail spending",
+              "source_report_section": "Retail sales / Online retail sales",
+              "cdid": "MS6Y",
+              "csv_row_label": "2025 SEP",
+              "csv_column_1_based": 597,
+              "csv_row_1_based": 648,
+              "series_title": "RSI: Internet: All Retailing excl auto fuel: All Bus: SA: proportion of retail",
+              "declared_report_value": "28.0",
+              "csv_value": "28.0",
+              "unit": "percent_share",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail excluding automotive fuel",
+              "status": "matched"
+            },
+            {
+              "claim": "Previous month volume growth as revised in this release",
+              "cdid": "J5EC",
+              "csv_row_label": "2025 AUG",
+              "csv_column_1_based": 417,
+              "csv_row_1_based": 647,
+              "declared_report_value": "0.6",
+              "csv_value": "0.6",
+              "unit": "percent_change",
+              "seasonal_adjustment": "seasonally_adjusted",
+              "population": "All retail including automotive fuel",
+              "status": "matched"
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "Bind the correct series and release vintage from the full historical CSV.",
+        "The August release rebases indices to 2023=100.",
+        "A brief HTTP429 download failure was retained; a paced retry succeeded."
+      ],
+      "license": {
+        "name": "Open Government Licence v3.0 except where otherwise stated",
+        "url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+      },
+      "revision_examples": [
+        {
+          "period": "2025 APR",
+          "cdid": "J5EC",
+          "june_release": "1.7",
+          "july_release": "-0.4",
+          "unit": "percent_change",
+          "source_report": "https://www.ons.gov.uk/businessindustryandtrade/retailindustry/bulletins/retailsales/july2025",
+          "source_section": "Revisions, Table 1",
+          "status": "matched"
+        },
+        {
+          "period": "2025 MAY",
+          "cdid": "J5EC",
+          "june_release": "-2.8",
+          "july_release": "-1.0",
+          "unit": "percent_change",
+          "source_report": "https://www.ons.gov.uk/businessindustryandtrade/retailindustry/bulletins/retailsales/july2025",
+          "source_section": "Revisions, Table 1",
+          "status": "matched"
+        },
+        {
+          "period": "2025 JUN",
+          "cdid": "J5EC",
+          "june_release": "0.9",
+          "july_release": "0.3",
+          "unit": "percent_change",
+          "source_report": "https://www.ons.gov.uk/businessindustryandtrade/retailindustry/bulletins/retailsales/july2025",
+          "source_section": "Revisions, Table 1",
+          "status": "matched"
+        }
+      ],
+      "version_index": {
+        "url": "https://www.ons.gov.uk/businessindustryandtrade/retailindustry/datasets/retailsales/current",
+        "local_path": "timeseries-version-index.html",
+        "sha256": "2bffbc7ee9a0c17c2a84cc94acc22fa65b8262a50152ec13543691ef7584eafe"
+      }
+    },
+    {
+      "id": "fmc_freight",
+      "publisher": "Federal Maritime Commission",
+      "title": "Containerized Freight Statistics",
+      "landing_url": "https://www.fmc.gov/databases-and-publications/containerized-freight-statistics/",
+      "units": {
+        "container_columns": "20-foot equivalent units per official landing-page reporting scope; PDF label says Containers.",
+        "tonnage_columns": "Tonnage; precise ton standard not specified in the retrieved workbook, report tables or landing page. Do not infer metric/short tons."
+      },
+      "vintage_status": "2025 quarters from the same updated August2026 publication; not original quarterly vintages",
+      "data_level": "Quarter x US port and separately quarter x ocean carrier, six aggregated integer measures per row. Not raw shipment/container-event records.",
+      "required_capabilities": [
+        "Image-based PDF table extraction",
+        "Quarter/port/empty-laden/import-export dimensional mapping",
+        "Count and tonnage units with declared rounding rules",
+        "Quarter-scoped views of annual source workbook"
+      ],
+      "cases": [
+        {
+          "id": "fmc-cfs-2025-q1",
+          "period": "2025-Q1",
+          "report_asset": "fmc-cfs-2025-q1-report",
+          "data_assets": [
+            "fmc-cfs-2025-source"
+          ],
+          "verified_source_checks": [
+            {
+              "quarter": "Q1 2025",
+              "port": "Long Beach, California",
+              "cell": "C15",
+              "actual": 253939,
+              "pdf_printed": 253939,
+              "passed": true
+            },
+            {
+              "quarter": "Q1 2025",
+              "port": "Long Beach, California",
+              "cell": "D15",
+              "actual": 725793,
+              "pdf_printed": 725793,
+              "passed": true
+            },
+            {
+              "quarter": "Q1 2025",
+              "port": "Long Beach, California",
+              "cell": "E15",
+              "actual": 949420,
+              "pdf_printed": 949420,
+              "passed": true
+            },
+            {
+              "quarter": "Q1 2025",
+              "port": "Long Beach, California",
+              "cell": "F15",
+              "actual": 1973,
+              "pdf_printed": 1973,
+              "passed": true
+            },
+            {
+              "quarter": "Q1 2025",
+              "port": "Los Angeles, California",
+              "cell": "C16",
+              "actual": 430789,
+              "pdf_printed": 430789,
+              "passed": true
+            },
+            {
+              "quarter": "Q1 2025",
+              "port": "Los Angeles, California",
+              "cell": "D16",
+              "actual": 635105,
+              "pdf_printed": 635105,
+              "passed": true
+            },
+            {
+              "quarter": "Q1 2025",
+              "port": "Los Angeles, California",
+              "cell": "E16",
+              "actual": 1071663,
+              "pdf_printed": 1071663,
+              "passed": true
+            },
+            {
+              "quarter": "Q1 2025",
+              "port": "Los Angeles, California",
+              "cell": "F16",
+              "actual": 2203,
+              "pdf_printed": 2203,
+              "passed": true
+            }
+          ]
+        },
+        {
+          "id": "fmc-cfs-2025-q2",
+          "period": "2025-Q2",
+          "report_asset": "fmc-cfs-2025-q2-report",
+          "data_assets": [
+            "fmc-cfs-2025-source"
+          ],
+          "verified_source_checks": [
+            {
+              "quarter": "Q2 2025",
+              "port": "Long Beach, California",
+              "cell": "C51",
+              "actual": 169415,
+              "pdf_printed": 169415,
+              "passed": true
+            },
+            {
+              "quarter": "Q2 2025",
+              "port": "Long Beach, California",
+              "cell": "D51",
+              "actual": 666379,
+              "pdf_printed": 666379,
+              "passed": true
+            },
+            {
+              "quarter": "Q2 2025",
+              "port": "Long Beach, California",
+              "cell": "E51",
+              "actual": 868974,
+              "pdf_printed": 868974,
+              "passed": true
+            },
+            {
+              "quarter": "Q2 2025",
+              "port": "Long Beach, California",
+              "cell": "F51",
+              "actual": 2705,
+              "pdf_printed": 2705,
+              "passed": true
+            },
+            {
+              "quarter": "Q2 2025",
+              "port": "Los Angeles, California",
+              "cell": "C52",
+              "actual": 305661,
+              "pdf_printed": 305661,
+              "passed": true
+            },
+            {
+              "quarter": "Q2 2025",
+              "port": "Los Angeles, California",
+              "cell": "D52",
+              "actual": 643151,
+              "pdf_printed": 643151,
+              "passed": true
+            },
+            {
+              "quarter": "Q2 2025",
+              "port": "Los Angeles, California",
+              "cell": "E52",
+              "actual": 1034271,
+              "pdf_printed": 1034271,
+              "passed": true
+            },
+            {
+              "quarter": "Q2 2025",
+              "port": "Los Angeles, California",
+              "cell": "F52",
+              "actual": 1363,
+              "pdf_printed": 1363,
+              "passed": true
+            }
+          ]
+        },
+        {
+          "id": "fmc-cfs-2025-q3",
+          "period": "2025-Q3",
+          "report_asset": "fmc-cfs-2025-q3-report",
+          "data_assets": [
+            "fmc-cfs-2025-source"
+          ],
+          "verified_source_checks": [
+            {
+              "quarter": "Q3 2025",
+              "port": "Long Beach, California",
+              "cell": "C88",
+              "actual": 176500,
+              "pdf_printed": 176500,
+              "passed": true
+            },
+            {
+              "quarter": "Q3 2025",
+              "port": "Long Beach, California",
+              "cell": "D88",
+              "actual": 802226,
+              "pdf_printed": 802226,
+              "passed": true
+            },
+            {
+              "quarter": "Q3 2025",
+              "port": "Long Beach, California",
+              "cell": "E88",
+              "actual": 1030520,
+              "pdf_printed": 1030520,
+              "passed": true
+            },
+            {
+              "quarter": "Q3 2025",
+              "port": "Long Beach, California",
+              "cell": "F88",
+              "actual": 3197,
+              "pdf_printed": 3197,
+              "passed": true
+            },
+            {
+              "quarter": "Q3 2025",
+              "port": "Los Angeles, California",
+              "cell": "C89",
+              "actual": 299722,
+              "pdf_printed": 299722,
+              "passed": true
+            },
+            {
+              "quarter": "Q3 2025",
+              "port": "Los Angeles, California",
+              "cell": "D89",
+              "actual": 800916,
+              "pdf_printed": 800916,
+              "passed": true
+            },
+            {
+              "quarter": "Q3 2025",
+              "port": "Los Angeles, California",
+              "cell": "E89",
+              "actual": 1250696,
+              "pdf_printed": 1250696,
+              "passed": true
+            },
+            {
+              "quarter": "Q3 2025",
+              "port": "Los Angeles, California",
+              "cell": "F89",
+              "actual": 1578,
+              "pdf_printed": 1578,
+              "passed": true
+            }
+          ]
+        },
+        {
+          "id": "fmc-cfs-2025-q4",
+          "period": "2025-Q4",
+          "report_asset": "fmc-cfs-2025-q4-report",
+          "data_assets": [
+            "fmc-cfs-2025-source"
+          ],
+          "verified_source_checks": [
+            {
+              "quarter": "Q4 2025",
+              "port": "Long Beach, California",
+              "cell": "C125",
+              "actual": 209047,
+              "pdf_printed": 209047,
+              "passed": true
+            },
+            {
+              "quarter": "Q4 2025",
+              "port": "Long Beach, California",
+              "cell": "D125",
+              "actual": 728028,
+              "pdf_printed": 728028,
+              "passed": true
+            },
+            {
+              "quarter": "Q4 2025",
+              "port": "Long Beach, California",
+              "cell": "E125",
+              "actual": 962835,
+              "pdf_printed": 962835,
+              "passed": true
+            },
+            {
+              "quarter": "Q4 2025",
+              "port": "Long Beach, California",
+              "cell": "F125",
+              "actual": 2752,
+              "pdf_printed": 2752,
+              "passed": true
+            },
+            {
+              "quarter": "Q4 2025",
+              "port": "Los Angeles, California",
+              "cell": "C126",
+              "actual": 285878,
+              "pdf_printed": 285878,
+              "passed": true
+            },
+            {
+              "quarter": "Q4 2025",
+              "port": "Los Angeles, California",
+              "cell": "D126",
+              "actual": 645839,
+              "pdf_printed": 645839,
+              "passed": true
+            },
+            {
+              "quarter": "Q4 2025",
+              "port": "Los Angeles, California",
+              "cell": "E126",
+              "actual": 1065463,
+              "pdf_printed": 1065463,
+              "passed": true
+            },
+            {
+              "quarter": "Q4 2025",
+              "port": "Los Angeles, California",
+              "cell": "F126",
+              "actual": 980,
+              "pdf_printed": 980,
+              "passed": true
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "Container grand totals do not exactly reproduce from rounded-looking published integer categories/rows. Discrepancies retained, no tolerance silently applied; cause unconfirmed.",
+        "Tonnage US-port and carrier aggregation matches both PDF totals exactly in each quarter.",
+        "Image tables need OCR/visual extraction; native text alone contains almost only period labels.",
+        "Changing port membership:37,36,37,37 rows by quarter; no synthetic zero rows introduced.",
+        "Workbook supplies the published aggregates underlying four tabular report views, not the confidential raw carrier submissions.",
+        "Public unauthenticated official downloads verified. No explicit reuse-license grant located on landing/site-policies pages; retain attribution and do not claim a verified license.",
+        "Monthly POLA/LongBeach preference not fulfilled: LongBeach endpoint403; POLA offers monthly HTML tables but no paired monthly PDF/XLSX verified in this bounded search."
+      ],
+      "license_status": "Public download verified; no explicit reuse-license grant located.",
+      "source_reconciliation": [
+        {
+          "quarter": "Q1 2025",
+          "pdf": "quarter-1-2025.pdf",
+          "source_file": "CFS_2025_Data.xlsx",
+          "source_rows": {
+            "US Ports": {
+              "first_row": 2,
+              "last_row": 38,
+              "count": 37
+            },
+            "Ocean Carriers": {
+              "first_row": 2,
+              "last_row": 30,
+              "count": 29
+            }
+          },
+          "pdf_printed_container_totals": [
+            3477686,
+            3719786,
+            6438387,
+            247691,
+            13883549
+          ],
+          "pdf_printed_tonnage_totals": [
+            42065857,
+            67118133,
+            109183990
+          ],
+          "sheet_checks": {
+            "US Ports": {
+              "container_category_sums": [
+                3477693,
+                3719788,
+                6438392,
+                247690
+              ],
+              "container_category_difference_vs_pdf": [
+                7,
+                2,
+                5,
+                -1
+              ],
+              "container_grand_sum": 13883563,
+              "container_grand_difference_vs_pdf": 14,
+              "tonnage_sums": [
+                42065857,
+                67118133
+              ],
+              "tonnage_categories_match_pdf_exactly": true,
+              "tonnage_total_matches_pdf_exactly": true
+            },
+            "Ocean Carriers": {
+              "container_category_sums": [
+                3477687,
+                3719788,
+                6438392,
+                247694
+              ],
+              "container_category_difference_vs_pdf": [
+                1,
+                2,
+                5,
+                3
+              ],
+              "container_grand_sum": 13883561,
+              "container_grand_difference_vs_pdf": 12,
+              "tonnage_sums": [
+                42065857,
+                67118133
+              ],
+              "tonnage_categories_match_pdf_exactly": true,
+              "tonnage_total_matches_pdf_exactly": true
+            }
+          },
+          "published_container_categories_sum_minus_printed_grand_total": 1
+        },
+        {
+          "quarter": "Q2 2025",
+          "pdf": "quarter-2-2025.pdf",
+          "source_file": "CFS_2025_Data.xlsx",
+          "source_rows": {
+            "US Ports": {
+              "first_row": 39,
+              "last_row": 74,
+              "count": 36
+            },
+            "Ocean Carriers": {
+              "first_row": 31,
+              "last_row": 59,
+              "count": 29
+            }
+          },
+          "pdf_printed_container_totals": [
+            2836893,
+            3638819,
+            6265155,
+            240058,
+            12980924
+          ],
+          "pdf_printed_tonnage_totals": [
+            42648224,
+            68735795,
+            111384019
+          ],
+          "sheet_checks": {
+            "US Ports": {
+              "container_category_sums": [
+                2836897,
+                3638821,
+                6265157,
+                240061
+              ],
+              "container_category_difference_vs_pdf": [
+                4,
+                2,
+                2,
+                3
+              ],
+              "container_grand_sum": 12980936,
+              "container_grand_difference_vs_pdf": 12,
+              "tonnage_sums": [
+                42648224,
+                68735795
+              ],
+              "tonnage_categories_match_pdf_exactly": true,
+              "tonnage_total_matches_pdf_exactly": true
+            },
+            "Ocean Carriers": {
+              "container_category_sums": [
+                2836896,
+                3638822,
+                6265158,
+                240059
+              ],
+              "container_category_difference_vs_pdf": [
+                3,
+                3,
+                3,
+                1
+              ],
+              "container_grand_sum": 12980935,
+              "container_grand_difference_vs_pdf": 11,
+              "tonnage_sums": [
+                42648224,
+                68735795
+              ],
+              "tonnage_categories_match_pdf_exactly": true,
+              "tonnage_total_matches_pdf_exactly": true
+            }
+          },
+          "published_container_categories_sum_minus_printed_grand_total": 1
+        },
+        {
+          "quarter": "Q3 2025",
+          "pdf": "quarter-3-2025.pdf",
+          "source_file": "CFS_2025_Data.xlsx",
+          "source_rows": {
+            "US Ports": {
+              "first_row": 75,
+              "last_row": 111,
+              "count": 37
+            },
+            "Ocean Carriers": {
+              "first_row": 60,
+              "last_row": 88,
+              "count": 29
+            }
+          },
+          "pdf_printed_container_totals": [
+            2785205,
+            4085739,
+            6917646,
+            228542,
+            14017131
+          ],
+          "pdf_printed_tonnage_totals": [
+            42190137,
+            73398282,
+            115588419
+          ],
+          "sheet_checks": {
+            "US Ports": {
+              "container_category_sums": [
+                2785205,
+                4085743,
+                6917648,
+                228545
+              ],
+              "container_category_difference_vs_pdf": [
+                0,
+                4,
+                2,
+                3
+              ],
+              "container_grand_sum": 14017141,
+              "container_grand_difference_vs_pdf": 10,
+              "tonnage_sums": [
+                42190137,
+                73398282
+              ],
+              "tonnage_categories_match_pdf_exactly": true,
+              "tonnage_total_matches_pdf_exactly": true
+            },
+            "Ocean Carriers": {
+              "container_category_sums": [
+                2785210,
+                4085743,
+                6917648,
+                228545
+              ],
+              "container_category_difference_vs_pdf": [
+                5,
+                4,
+                2,
+                3
+              ],
+              "container_grand_sum": 14017146,
+              "container_grand_difference_vs_pdf": 15,
+              "tonnage_sums": [
+                42190137,
+                73398282
+              ],
+              "tonnage_categories_match_pdf_exactly": true,
+              "tonnage_total_matches_pdf_exactly": true
+            }
+          },
+          "published_container_categories_sum_minus_printed_grand_total": 1
+        },
+        {
+          "quarter": "Q4 2025",
+          "pdf": "quarter-4-2025.pdf",
+          "source_file": "CFS_2025_Data.xlsx",
+          "source_rows": {
+            "US Ports": {
+              "first_row": 112,
+              "last_row": 148,
+              "count": 37
+            },
+            "Ocean Carriers": {
+              "first_row": 89,
+              "last_row": 117,
+              "count": 29
+            }
+          },
+          "pdf_printed_container_totals": [
+            2894727,
+            3417351,
+            6179453,
+            239426,
+            12730957
+          ],
+          "pdf_printed_tonnage_totals": [
+            41819524,
+            64231895,
+            106051419
+          ],
+          "sheet_checks": {
+            "US Ports": {
+              "container_category_sums": [
+                2894733,
+                3417356,
+                6179460,
+                239427
+              ],
+              "container_category_difference_vs_pdf": [
+                6,
+                5,
+                7,
+                1
+              ],
+              "container_grand_sum": 12730976,
+              "container_grand_difference_vs_pdf": 19,
+              "tonnage_sums": [
+                41819524,
+                64231895
+              ],
+              "tonnage_categories_match_pdf_exactly": true,
+              "tonnage_total_matches_pdf_exactly": true
+            },
+            "Ocean Carriers": {
+              "container_category_sums": [
+                2894730,
+                3417355,
+                6179458,
+                239428
+              ],
+              "container_category_difference_vs_pdf": [
+                3,
+                4,
+                5,
+                2
+              ],
+              "container_grand_sum": 12730971,
+              "container_grand_difference_vs_pdf": 14,
+              "tonnage_sums": [
+                41819524,
+                64231895
+              ],
+              "tonnage_categories_match_pdf_exactly": true,
+              "tonnage_total_matches_pdf_exactly": true
+            }
+          },
+          "published_container_categories_sum_minus_printed_grand_total": 0
+        }
+      ]
+    }
+  ]
+}
