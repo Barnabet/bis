@@ -25,6 +25,7 @@ import { api, identifier, messageOf, post } from "./api";
 import { Badge, ErrorNotice, KeyValue, Modal, pretty, Spinner } from "./ui";
 import { JobProgress } from "./Dialogs";
 import { ModelConfiguration, modelProviderLabel } from "./ModelConfiguration";
+import { eligibleSources, eligibleTargets, monthlySourcePeriod, publicFamily } from "./publicReports";
 
 const exampleLabel = (example: HistoricalExample) =>
   example.label || example.period.label || example.report_filename;
@@ -37,30 +38,20 @@ const roleLabel = (role: string) =>
 
 function AddExampleDialog({
   reportTypeId,
+  program,
   assets,
   onClose,
   onSaved,
 }: {
   reportTypeId: string;
+  program: Program;
   assets: Asset[];
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
-  const targets = assets.filter(
-    (asset) =>
-      !asset.reserved &&
-      asset.status !== "blocked" &&
-      Array.isArray(asset.profile?.eligible_roles) &&
-      asset.profile.eligible_roles.includes("historical_target") &&
-      /\.(docx|pdf)$/i.test(asset.filename),
-  );
-  const sources = assets.filter(
-    (asset) =>
-      !asset.reserved &&
-      asset.status !== "blocked" &&
-      Array.isArray(asset.profile?.eligible_roles) &&
-      asset.profile.eligible_roles.includes("transactions"),
-  );
+  const family = publicFamily(program);
+  const targets = eligibleTargets(assets, program);
+  const sources = eligibleSources(assets, program);
   const [target, setTarget] = useState("");
   const [source, setSource] = useState("");
   const [label, setLabel] = useState("");
@@ -79,6 +70,14 @@ function AddExampleDialog({
   const [error, setError] = useState<string | null>(null);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (!sources.some((asset) => asset.id === source) || !targets.some((asset) => asset.id === target)) {
+      setError("Choose a historical report and source eligible for this reporting family.");
+      return;
+    }
+    if (family && !monthlySourcePeriod(sources.find((asset) => asset.id === source), family)) {
+      setError("The public source needs a valid reference month and publication date. Reimport the original release file in Sources.");
+      return;
+    }
     if (
       period.end_exclusive <= period.start ||
       period.comparison.end_exclusive <= period.comparison.start
@@ -114,7 +113,8 @@ function AddExampleDialog({
       <form onSubmit={submit}>
         <div className="modal-body">
           <p className="dialog-intro">
-            Connect a historical DOCX or PDF to the transaction data behind it.
+            {family ? "Connect a historical PDF bulletin to its matching release-vintage data." : "Connect a historical DOCX or PDF to the transaction data behind it."}
+            {" "}
             Its target values are evidence for learning, never inputs to a new
             report period.
           </p>
@@ -135,7 +135,7 @@ function AddExampleDialog({
               required
             >
               <option value="" disabled>
-                Choose a DOCX or PDF target
+                {family ? "Choose the historical PDF bulletin" : "Choose a DOCX or PDF target"}
               </option>
               {targets.map((asset) => (
                 <option key={asset.id} value={asset.id}>
@@ -145,14 +145,18 @@ function AddExampleDialog({
             </select>
           </label>
           <label className="field">
-            Transaction source
+            {family ? "Published source data" : "Transaction source"}
             <select
               value={source}
-              onChange={(e) => setSource(e.target.value)}
+              onChange={(event) => {
+                setSource(event.target.value);
+                const next = monthlySourcePeriod(sources.find((asset) => asset.id === event.target.value), family);
+                if (next) setPeriod(next);
+              }}
               required
             >
               <option value="" disabled>
-                Choose the CSV or XLSX behind the report
+                {family ? "Choose the matching release file" : "Choose the CSV or XLSX behind the report"}
               </option>
               {sources.map((asset) => (
                 <option key={asset.id} value={asset.id}>
@@ -165,8 +169,7 @@ function AddExampleDialog({
             <div className="notice info">
               <Info size={17} />
               <p>
-                Upload the historical report and one compatible transaction
-                source in Sources, then return here to pair them.
+                {family ? "Import the historical PDF and its data in Sources using this reporting family, then return here to pair them." : "Upload the historical report and one compatible transaction source in Sources, then return here to pair them."}
               </p>
             </div>
           )}
@@ -181,6 +184,7 @@ function AddExampleDialog({
               placeholder="e.g. Q1 2025"
             />
           </label>
+          {family && <p className="field-help">The selected source supplies the reference month and publication vintage. Review remaining report content separately from the headline figures.</p>}
           <fieldset className="period-fieldset">
             <legend>Reported period</legend>
             <div className="field-row">
@@ -189,6 +193,7 @@ function AddExampleDialog({
                 <input
                   type="date"
                   value={period.start}
+                  readOnly={Boolean(family)}
                   onChange={(e) =>
                     setPeriod((p) => ({ ...p, start: e.target.value }))
                   }
@@ -200,6 +205,7 @@ function AddExampleDialog({
                 <input
                   type="date"
                   value={period.end_exclusive}
+                  readOnly={Boolean(family)}
                   onChange={(e) =>
                     setPeriod((p) => ({ ...p, end_exclusive: e.target.value }))
                   }
@@ -216,6 +222,7 @@ function AddExampleDialog({
                 <input
                   type="date"
                   value={period.comparison.start}
+                  readOnly={Boolean(family)}
                   onChange={(e) =>
                     setPeriod((p) => ({
                       ...p,
@@ -230,6 +237,7 @@ function AddExampleDialog({
                 <input
                   type="date"
                   value={period.comparison.end_exclusive}
+                  readOnly={Boolean(family)}
                   onChange={(e) =>
                     setPeriod((p) => ({
                       ...p,
@@ -1107,6 +1115,7 @@ export function LearningPanel({
       {modal?.kind === "add" && (
         <AddExampleDialog
           reportTypeId={program.report_type_id}
+          program={program}
           assets={assets}
           onClose={closeModal}
           onSaved={async () => {

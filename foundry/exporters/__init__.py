@@ -23,7 +23,7 @@ from typing import Callable
 from .pivot import add_flat_pivot
 from .images import resolve_images, set_picture_properties, annotate_workbook_images
 
-VERSION = "1.1.0"
+VERSION = "1.2.1"
 MEDIA_TYPES = {
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -78,12 +78,21 @@ def _text(node, facts) -> str:
     return "".join(result)
 
 
-def _display(value, column) -> str:
+def _ratio_column(column):
+    return column.get("unit") in {"ratio", "percent", "%"} or (column["id"] == "growth" and not column.get("unit"))
+
+
+def _display(value, column, facts=None) -> str:
+    if column.get("type") == "fact" and value is not None:
+        fact = (facts or {}).get(value)
+        if fact is None:
+            raise ExportError("A table cell references a missing fact.", "missing_fact")
+        return str(fact["display"])
     if value is None:
         return "Undefined"
     if column.get("type") in {"decimal", "integer"}:
         amount = Decimal(str(value))
-        if column.get("unit") in {"ratio", "percent", "%"} or column["id"] == "growth":
+        if _ratio_column(column):
             rounded = (amount * 100).quantize(Decimal(".1"), rounding=ROUND_HALF_UP)
             return f"{rounded:+.1f}%"
         if column.get("unit") == "EUR":
@@ -99,7 +108,7 @@ def _table(snapshot, node, pivot=False):
     if pivot:
         columns = [next(c for c in columns if c["id"] == key) for key in ["region", "comparison", "current"]]
     headers = [c["label"] + (" (EUR)" if c.get("unit") == "EUR" and "EUR" not in c["label"] else "") for c in columns]
-    rows = [[_display(row[c["id"]], c) for c in columns] for row in data["rows"]]
+    rows = [[_display(row[c["id"]], c, snapshot["facts"]) for c in columns] for row in data["rows"]]
     return headers, rows, columns, data
 
 
@@ -114,6 +123,17 @@ def _chart_data(snapshot, node):
         raise ExportError("A chart label exceeds this layout profile.", "chart_label_limit")
     series = [(s["label"], [_number(row[s["column_id"]]) for row in data["rows"]]) for s in node["series"]]
     return categories, series
+
+
+def _chart_axis_unit(node):
+    return {"percent_points": "percentage points", "usd_million": "USD million"}.get(node["axis_unit"], node["axis_unit"])
+
+
+def _chart_axis_decimals(snapshot, node):
+    measures = {series["column_id"] for series in node["series"]}
+    return 1 if node["axis_unit"] == "percent_points" or any(
+        column["id"] in measures and column.get("unit") == "percent_points"
+        for column in snapshot["datasets"][node["dataset_id"]]["columns"]) else 0
 
 
 def _chart_png(snapshot, node) -> bytes:
@@ -160,7 +180,8 @@ def _chart_png(snapshot, node) -> bytes:
         v = low + span * i / 4
         x = project(v)
         draw.line((x, top, x, bottom), fill="#E4EAE6", width=1)
-        draw.text((x - 10, bottom + 12), f"{v:,.0f}", fill=f"#{MUTED}", font=small)
+        label = f"{v:,.{_chart_axis_decimals(snapshot, node)}f}"
+        draw.text((x - 10, bottom + 12), label, fill=f"#{MUTED}", font=small)
     palette = [f"#{GREEN}", "#A3B9AF", "#738AA1"]
     row_h = (bottom - top) / len(categories)
     bar_h = min(24, row_h / (len(series) + 1))
@@ -172,9 +193,11 @@ def _chart_png(snapshot, node) -> bytes:
             y = cy + (j - len(series) / 2) * bar_h
             x = project(vals[i])
             draw.rectangle((min(baseline, x), y, max(baseline, x), y + bar_h - 3), fill=palette[j % len(palette)])
-            label_x = x + 8 if vals[i] >= 0 else max(0, x - 100)
+            # Negative bars can reach the category gutter. Put their signed
+            # value after the zero baseline so it cannot obscure the label.
+            label_x = (x if vals[i] >= 0 else baseline) + 8
             draw.text((label_x, y - 2), f"{vals[i]:,.2f}", fill=f"#{INK}", font=small)
-    draw.text((8, 14), f"{node['title']} ({node['axis_unit']})", fill=f"#{INK}", font=font)
+    draw.text((8, 14), f"{node['title']} ({_chart_axis_unit(node)})", fill=f"#{INK}", font=font)
     for j, (x, y, lines) in enumerate(legend):
         y += legend_top
         draw.rectangle((x, y + 3, x + 18, y + 21), fill=palette[j % len(palette)])
@@ -212,6 +235,10 @@ def _plan(snapshot, fmt, policy):
     if view["coverage"]["scope"] == "complete" and set(identifiers) != leaves:
         raise ExportError("A complete view must represent every content component.", "missing_coverage")
     selected = [nodes[i] for i in identifiers]
+    if fmt in {"xlsx", "pptx"} and any(sum(n["kind"] == kind for n in selected) > 1 for kind in ("chart", "pivot")):
+        raise ExportError("This native layout supports at most one chart and one pivot per view.", "unsupported_native_layout")
+    if fmt == "pptx" and sum(n["kind"] == "table" for n in selected) > 1:
+        raise ExportError("This presentation layout supports one table, continued across slides when needed.", "unsupported_native_layout")
     for node in selected:
         if node["kind"] not in {"rich_text", "table", "chart", "pivot", "image"}:
             raise ExportError(f"The {node['kind']} component {node['id']} has no certified asset adapter.", "unsupported_component")
@@ -363,6 +390,7 @@ def _docx(snapshot, nodes, path, policy, view, images):
         elif node["kind"] == "chart":
             doc.add_heading(node["title"], 2)
             doc.add_picture(BytesIO(_chart_png(snapshot, node)), width=Inches(6.6))
+            doc.paragraphs[-1].paragraph_format.keep_with_next = True
             doc.add_paragraph("Chart uses the accepted report values. The document contains a static image.", "Caption")
             mapping.append(_location(node, "raster_fallback", f"bookmark:rf_{node['id']}", editable=False,
                                      native_behavior="static chart", fallback_approval="flow view policy"))
@@ -389,6 +417,14 @@ def _docx(snapshot, nodes, path, policy, view, images):
     for node in nodes:
         if node["kind"] == "rich_text" and _text(node, snapshot["facts"]) not in actual:
             raise ExportError("DOCX text verification failed.", "render_content_mismatch")
+    expected_tables = []
+    for node in nodes:
+        if node["kind"] in {"table", "pivot"}:
+            headers, rows, _, _ = _table(snapshot, node, node["kind"] == "pivot")
+            expected_tables.append([headers, *rows])
+    actual_tables = [[[cell.text for cell in row.cells] for row in table.rows] for table in readback.tables]
+    if actual_tables != expected_tables:
+        raise ExportError("DOCX table display verification failed.", "render_content_mismatch")
     with ZipFile(path) as z:
         document = ET.fromstring(z.read("word/document.xml"))
         ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
@@ -398,6 +434,7 @@ def _docx(snapshot, nodes, path, policy, view, images):
         if any(n["kind"] == "rich_text" for n in nodes) and not any(i.attrib.get(f"{{{ns['w']}}}left") == str(round(indent*20)) for i in indents):
             raise ExportError("DOCX precision indentation was not retained.", "render_structure_mismatch")
     validations.extend([{"check": "accepted_text_roundtrip", "status": "pass"},
+                        {"check": "table_display_roundtrip", "status": "pass"},
                         {"check": "repeated_table_headers", "status": "pass"},
                         {"check": "declared_paragraph_left_indent", "status": "pass", "points": indent},
                         {"check": "target_application_pagination", "status": "not_certified"}])
@@ -407,6 +444,7 @@ def _docx(snapshot, nodes, path, policy, view, images):
 def _xlsx(snapshot, nodes, path, policy, view, images):
     import xlsxwriter
     from openpyxl import load_workbook
+    from xlsxwriter.utility import xl_col_to_name
     workbook = xlsxwriter.Workbook(path, {"strings_to_urls": False, "strings_to_formulas": False})
     workbook.set_properties({"title": snapshot["title"], "subject": f"Snapshot {snapshot['id']} revision {snapshot['revision']}"})
     overview = workbook.add_worksheet("Overview")
@@ -419,6 +457,7 @@ def _xlsx(snapshot, nodes, path, policy, view, images):
     number = workbook.add_format({"num_format": '#,##0.00;[Red](#,##0.00)', "border": 1, "border_color": "D9D9D9"})
     ratio = workbook.add_format({"num_format": '+0.0%;[Red]-0.0%;+0.0%', "border": 1, "border_color": "D9D9D9"})
     cell = workbook.add_format({"border": 1, "border_color": "D9D9D9"})
+    wrapped_cell = workbook.add_format({"border": 1, "border_color": "D9D9D9", "text_wrap": True, "valign": "vcenter"})
     for sheet in [overview, analysis, source]:
         sheet.hide_gridlines(2)
         sheet.set_column("A:A", 23)
@@ -428,23 +467,30 @@ def _xlsx(snapshot, nodes, path, policy, view, images):
         sheet.fit_to_pages(1, 0)
         sheet.set_paper(9)
         sheet.set_margins(.3, .3, .5, .5)
-    overview.merge_range("A1:E2", snapshot["title"], title)
-    overview.merge_range("A3:E3", _period_caption(snapshot), subtitle)
+    fact_table = next((snapshot["datasets"][node["dataset_id"]] for node in nodes if node["kind"] == "table"
+                       and any(c["type"] == "fact" for c in snapshot["datasets"][node["dataset_id"]]["columns"])), None)
+    compact_fact_table = fact_table is not None and len(fact_table["columns"]) == 2 and not any(n["kind"] == "pivot" for n in nodes)
+    overview_last_column = 1 if compact_fact_table else 4
+    if compact_fact_table:
+        overview.set_column("A:A", 38)
+        overview.set_column("B:B", 48)
+    overview.merge_range(0, 0, 1, overview_last_column, snapshot["title"], title)
+    overview.merge_range(2, 0, 2, overview_last_column, _period_caption(snapshot), subtitle)
     overview.freeze_panes(4, 1)
-    analysis.merge_range("A1:H1", "Regional analysis", title)
+    pivot_node = next((n for n in nodes if n["kind"] == "pivot"), None)
+    analysis.merge_range("A1:H1", "Regional analysis" if pivot_node else "Report analysis", title)
     analysis.set_column("B:I", 19)
     source.freeze_panes(1, 0)
     mapping, row_cursor, pivot_meta = [], 4, None
     analysis_last_row = 20
-    table_reference = None
-    pivot_node = next((n for n in nodes if n["kind"] == "pivot"), None)
+    table_references, table_checks = {}, []
     chart_node = next((n for n in nodes if n["kind"] == "chart"), None)
     for node in nodes:
         if node["kind"] == "rich_text":
             text = _text(node, snapshot["facts"])
             height = max(2, math.ceil(len(text) / 92))
-            overview.merge_range(row_cursor, 0, row_cursor + height - 1, 4, text, body)
-            mapping.append(_location(node, "native_text", f"Overview!A{row_cursor+1}:E{row_cursor+height}", editable=True))
+            overview.merge_range(row_cursor, 0, row_cursor + height - 1, overview_last_column, text, body)
+            mapping.append(_location(node, "native_text", f"Overview!A{row_cursor+1}:{xl_col_to_name(overview_last_column)}{row_cursor+height}", editable=True))
             row_cursor += height + 1
         elif node["kind"] == "table":
             headers, rows, columns, data = _table(snapshot, node)
@@ -453,23 +499,32 @@ def _xlsx(snapshot, nodes, path, policy, view, images):
             start = row_cursor
             for c, label in enumerate(headers):
                 overview.write_string(row_cursor, c, label, head)
+                table_checks.append((row_cursor + 1, c + 1, label, None))
             overview.set_row(row_cursor, 34)
             for offset, row in enumerate(data["rows"], 1):
                 for c, column in enumerate(columns):
                     value = row[column["id"]]
-                    fmt = ratio if column["id"] == "growth" else number
+                    fmt = ratio if _ratio_column(column) else number
                     if column["type"] in {"decimal", "integer"} and value is not None:
-                        overview.write_number(row_cursor + offset, c, _number(value, approximate=column["id"] == "growth"), fmt)
+                        exported = _number(value, approximate=_ratio_column(column))
+                        overview.write_number(row_cursor + offset, c, exported, fmt)
                     else:
-                        overview.write_string(row_cursor + offset, c, _display(value, column), cell)
+                        exported = _display(value, column, snapshot["facts"])
+                        overview.write_string(row_cursor + offset, c, exported, wrapped_cell if compact_fact_table else cell)
+                    table_checks.append((row_cursor + offset + 1, c + 1, exported,
+                                         column if _ratio_column(column) and column["type"] in {"decimal", "integer"} and value is not None else None))
+                if compact_fact_table:
+                    lines = max(math.ceil(len(value) / width) for value, width in zip(rows[offset - 1], (36, 46)))
+                    overview.set_row(row_cursor + offset, max(22, 15 * lines))
             overview.autofilter(row_cursor, 0, row_cursor + len(rows), len(columns)-1)
             overview.repeat_rows(row_cursor)
-            table_reference = (start, data, columns)
-            mapping.append(_location(node, "native_table", f"Overview!A{start+1}:E{start+len(rows)+1}", editable=True))
+            table_references[data["id"]] = ("Overview", start, data, columns)
+            mapping.append(_location(node, "native_table", f"Overview!A{start+1}:{xl_col_to_name(len(columns)-1)}{start+len(rows)+1}", editable=True))
             row_cursor += len(rows) + 3
     source_rows = snapshot["datasets"][pivot_node["dataset_id"]]["rows"] if pivot_node else []
-    for c, name in enumerate(["region", "period", "revenue"]):
-        source.write_string(0, c, name, head)
+    if pivot_node:
+        for c, name in enumerate(["region", "period", "revenue"]):
+            source.write_string(0, c, name, head)
     for r, record in enumerate(source_rows, 1):
         if set(record) != {"region", "period", "revenue"}:
             workbook.close()
@@ -477,7 +532,8 @@ def _xlsx(snapshot, nodes, path, policy, view, images):
         source.write_string(r, 0, str(record["region"]), cell)
         source.write_string(r, 1, str(record["period"]), cell)
         source.write_number(r, 2, _number(record["revenue"]), number)
-    source.write_string(len(source_rows)+3, 0, "Approved regional aggregates only. No transaction identifiers are embedded.", subtitle)
+    if pivot_node:
+        source.write_string(len(source_rows)+3, 0, "Approved regional aggregates only. No transaction identifiers are embedded.", subtitle)
     if pivot_node:
         _, pivot_rows, _, data = _table(snapshot, pivot_node, True)
         analysis.write_string(2, 0, "Revenue (EUR)", subtitle)
@@ -498,27 +554,49 @@ def _xlsx(snapshot, nodes, path, policy, view, images):
                                  f"Analysis!A3:C{len(ordered)+4}", editable=True,
                                  target_certification="not_applicable" if policy == "static" else "pending"))
     if chart_node:
-        if not table_reference:
-            workbook.close()
-            raise ExportError("The workbook chart needs its declared materialized table.", "chart_source_missing")
-        start, data, columns = table_reference
-        if chart_node["dataset_id"] != data["id"]:
-            workbook.close()
-            raise ExportError("The chart must reference the approved regional table.", "chart_source_mismatch")
+        reference = table_references.get(chart_node["dataset_id"])
+        if reference is None:
+            data = snapshot["datasets"][chart_node["dataset_id"]]
+            keys = list(dict.fromkeys([chart_node["category_column"], *[s["column_id"] for s in chart_node["series"]]]))
+            columns = [next(c for c in data["columns"] if c["id"] == key) for key in keys]
+            # Embed only the declared chart categories and measures, never other
+            # columns or unrelated datasets carried by the native snapshot.
+            start = len(source_rows) + 6 if pivot_node else 0
+            for c, column in enumerate(columns):
+                source.write_string(start, c, column["label"], head)
+                if column["id"] == chart_node["category_column"]:
+                    source.set_column(c, c, 38)
+                for r, row in enumerate(data["rows"], start + 1):
+                    value = row[column["id"]]
+                    if column["id"] == chart_node["category_column"]:
+                        source.write_string(r, c, str(value), wrapped_cell)
+                        lines = sum(max(1, math.ceil(len(line) / 36)) for line in str(value).split("\n"))
+                        source.set_row(r, max(22, 15 * lines))
+                    else:
+                        source.write_number(r, c, _number(value), number)
+            reference = ("Approved data", start, data, columns)
+        sheet_name, start, data, columns = reference
         category_index = next(i for i, c in enumerate(columns) if c["id"] == chart_node["category_column"])
         chart = workbook.add_chart({"type": "bar"})
         for index, series in enumerate(chart_node["series"]):
             ci = next(i for i, c in enumerate(columns) if c["id"] == series["column_id"])
-            chart.add_series({"name": series["label"], "categories": ["Overview", start+1, category_index, start+len(data["rows"]), category_index],
-                              "values": ["Overview", start+1, ci, start+len(data["rows"]), ci],
+            chart.add_series({"name": series["label"], "categories": [sheet_name, start+1, category_index, start+len(data["rows"]), category_index],
+                              "values": [sheet_name, start+1, ci, start+len(data["rows"]), ci],
                               "fill": {"color": GREEN if index == 0 else "A3B9AF"}, "border": {"none": True}})
         chart.set_title({"name": chart_node["title"]})
-        chart.set_x_axis({"name": chart_node["axis_unit"], "num_format": '#,##0'})
-        chart.set_y_axis({"reverse": True})
+        axis = {"name": _chart_axis_unit(chart_node),
+                "num_format": '#,##0.0' if _chart_axis_decimals(snapshot, chart_node) else '#,##0'}
+        chart_numbers = [value for _, values in _chart_data(snapshot, chart_node)[1] for value in values]
+        if min(chart_numbers) >= 0:
+            axis["min"] = 0
+        if max(chart_numbers) <= 0:
+            axis["max"] = 0
+        chart.set_x_axis(axis)
+        chart.set_y_axis({"reverse": True, "label_position": "low"})
         chart.set_legend({"position": "bottom"})
-        analysis.insert_chart(2, 4, chart, {"x_scale": 1.1, "y_scale": 1.18})
-        mapping.append(_location(chart_node, "native_chart", "Analysis!E3", editable=True))
-    overview.print_area(0, 0, row_cursor, 4)
+        analysis.insert_chart(2, 4 if pivot_node else 0, chart, {"x_scale": 1.1 if pivot_node else 1.6, "y_scale": 1.18})
+        mapping.append(_location(chart_node, "native_chart", "Analysis!E3" if pivot_node else "Analysis!A3", editable=True))
+    overview.print_area(0, 0, row_cursor, max([overview_last_column] + [len(ref[3]) - 1 for ref in table_references.values()]))
     analysis.print_area(0, 0, analysis_last_row, 8)
     image_nodes = [node for node in nodes if node["kind"] == "image"]
     if image_nodes:
@@ -564,13 +642,29 @@ def _xlsx(snapshot, nodes, path, policy, view, images):
             raise ExportError("Independent pivot structure verification failed.", "pivot_verification_failed")
     if any(cell.data_type == "f" for ws in check for row in ws for cell in row):
         raise ExportError("Materialized workbook unexpectedly contains formulas.", "unexpected_formula")
+    for row, column, expected, ratio_column in table_checks:
+        actual = check["Overview"].cell(row, column).value
+        # Ratio cells deliberately use native IEEE storage. Compare their
+        # declared display precision; every exact fact cell stays literal text.
+        if (_display(actual, ratio_column) != _display(expected, ratio_column) if ratio_column else actual != expected):
+            raise ExportError("Workbook table display verification failed.", "render_content_mismatch")
+    if chart_node:
+        charts = check["Analysis"]._charts
+        categories, series_values = _chart_data(snapshot, chart_node)
+        if (len(charts) != 1 or len(charts[0].series) != len(series_values)
+                or any([float(point.v) for point in actual.val.numRef.numCache.pt] != expected
+                       for actual, (_, expected) in zip(charts[0].series, series_values))):
+            raise ExportError("Workbook chart values verification failed.", "render_content_mismatch")
     check.close()
     validations = [{"check": "openpyxl_independent_parse", "status": "pass"},
+                   {"check": "table_display_roundtrip", "status": "pass"},
                    {"check": "materialized_values_no_formulas", "status": "pass"},
                    {"check": "approved_aggregate_cache_columns", "status": "pass"},
                    {"check": "target_application_interaction", "status": "not_certified"}]
     if pivot_meta:
         validations.append({"check": "pivot_definition_cache_records", "status": "pass"})
+    if chart_node:
+        validations.append({"check": "native_chart_values_roundtrip", "status": "pass"})
     return mapping, validations, "XlsxWriter", {"pivot": pivot_meta, "numeric_policy": "Currency retains source decimal display precision. Ratios use native IEEE numeric storage and one-decimal percentage display. Exact decimal authority remains the snapshot."}
 
 
@@ -695,7 +789,12 @@ def _pdf(snapshot, nodes, path, policy, view, images):
     for node in nodes:
         if node["kind"] == "rich_text" and normalize(_text(node, snapshot["facts"])) not in normalize(actual):
             raise ExportError("PDF text verification failed.", "render_content_mismatch")
-    return mapping, [{"check": "pdf_readback_and_accepted_text", "status": "pass"}], "reportlab", {
+        if node["kind"] in {"table", "pivot"}:
+            headers, rows, _, _ = _table(snapshot, node, node["kind"] == "pivot")
+            if any(normalize(value) not in normalize(actual) for value in headers + [cell for row in rows for cell in row]):
+                raise ExportError("PDF table display verification failed.", "render_content_mismatch")
+    return mapping, [{"check": "pdf_readback_and_accepted_text", "status": "pass"},
+                     {"check": "table_display_roundtrip", "status": "pass"}], "reportlab", {
         "page_count": len(reader.pages), "pdf_origin": "native_flow_reportlab", "office_pagination_equivalence": False,
         "font_profile": "Helvetica / Windows Latin; Symbol for U+2212 minus", "margin_mm": margin*25.4/72, "paragraph_indent_pt": indent}
 
@@ -703,7 +802,7 @@ def _pdf(snapshot, nodes, path, policy, view, images):
 def _pptx(snapshot, nodes, path, policy, view, images):
     from pptx import Presentation
     from pptx.chart.data import CategoryChartData
-    from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+    from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION, XL_TICK_LABEL_POSITION
     from pptx.dml.color import RGBColor
     from pptx.util import Inches, Pt
     prs = Presentation()
@@ -748,7 +847,7 @@ def _pptx(snapshot, nodes, path, policy, view, images):
                     p.font.color.rgb = RGBColor.from_string("FFFFFF" if r == 0 else INK)
         return shape
     first = add_slide(snapshot["title"])
-    second = add_slide("Regional analysis")
+    second = add_slide("Regional analysis" if any(n["kind"] == "pivot" for n in nodes) else "Report analysis")
     text_nodes = [n for n in nodes if n["kind"] == "rich_text"]
     y = 1.52
     for node in text_nodes:
@@ -762,14 +861,16 @@ def _pptx(snapshot, nodes, path, policy, view, images):
         y += height + .18
     for node in [n for n in nodes if n["kind"] == "table"]:
         headers, rows, _, _ = _table(snapshot, node)
-        first_capacity = max(1, min(8, math.floor((6.7-y)/.45)-1))
+        compact_table = len(headers) == 2 and not any(n["kind"] == "pivot" for n in nodes)
+        row_height = .42 if compact_table else .5
+        first_capacity = max(1, min(8, math.floor((6.7-y)/(.42 if compact_table else .45))-1))
         chunks = [rows[:first_capacity]]
         chunks.extend(rows[i:i+10] for i in range(first_capacity, len(rows), 10))
         locations = []
         for index, chunk in enumerate(chunks):
             slide = first if index == 0 else add_slide(f"{node['title']} continued")
             table_y = y if index == 0 else 1.6
-            shape = table(slide, headers, chunk, .6, table_y, 12.05, min(4.8, .5*(len(chunk)+1)))
+            shape = table(slide, headers, chunk, .6, table_y, 12.05, min(4.8, row_height*(len(chunk)+1)))
             slide_number = list(prs.slides).index(slide)+1
             locations.append(f"slide:{slide_number}/shape:{shape.shape_id}")
         mapping.append(_location(node, "native_table", locations, editable=True))
@@ -779,20 +880,30 @@ def _pptx(snapshot, nodes, path, policy, view, images):
         data.categories = categories
         for name, values in series:
             data.add_series(name, values)
-        chart = second.shapes.add_chart(XL_CHART_TYPE.BAR_CLUSTERED, Inches(.5), Inches(1.6), Inches(6.3), Inches(4.75), data).chart
+        has_pivot = any(n["kind"] == "pivot" for n in nodes)
+        chart = second.shapes.add_chart(XL_CHART_TYPE.BAR_CLUSTERED, Inches(.5 if has_pivot else .6), Inches(1.6), Inches(6.3 if has_pivot else 12.05), Inches(4.75), data).chart
         chart.has_title = True
-        chart.chart_title.text_frame.text = node["title"] + f" ({node['axis_unit']})"
+        chart.chart_title.text_frame.text = node["title"] + f" ({_chart_axis_unit(node)})"
         chart.has_legend = True
         chart.legend.position = XL_LEGEND_POSITION.BOTTOM
         chart.legend.font.size = Pt(11)
         chart.category_axis.tick_labels.font.size = Pt(12)
+        chart.category_axis.tick_label_position = XL_TICK_LABEL_POSITION.LOW
         chart.value_axis.tick_labels.font.size = Pt(10)
-        chart.value_axis.tick_labels.number_format = '#,##0'
+        chart.value_axis.tick_labels.number_format = '#,##0.0' if _chart_axis_decimals(snapshot, node) else '#,##0'
+        chart_numbers = [value for _, values in series for value in values]
+        if min(chart_numbers) >= 0:
+            chart.value_axis.minimum_scale = 0
+        if max(chart_numbers) <= 0:
+            chart.value_axis.maximum_scale = 0
         for index, series_object in enumerate(chart.series):
+            # An omitted flag renders negative bars incorrectly in the tested
+            # LibreOffice consumer. Explicitly preserve the normal series fill.
+            series_object.invert_if_negative = False
             series_object.format.fill.solid()
             series_object.format.fill.fore_color.rgb = RGBColor.from_string(GREEN if index == 0 else "A3B9AF")
         mapping.append(_location(node, "native_chart", "slide:2/chart:1", editable=True,
-                                 embedded_data="approved regional aggregates"))
+                                 embedded_data="declared chart categories and measures"))
     for node in [n for n in nodes if n["kind"] == "pivot"]:
         headers, rows, _, _ = _table(snapshot, node, True)
         locations = []
@@ -826,7 +937,26 @@ def _pptx(snapshot, nodes, path, policy, view, images):
     for node in text_nodes:
         if _text(node, snapshot["facts"]) not in text:
             raise ExportError("Presentation text verification failed.", "render_content_mismatch")
+    expected_rows = []
+    for kind in ("table", "pivot"):
+        for node in (n for n in nodes if n["kind"] == kind):
+            _, rows, _, _ = _table(snapshot, node, kind == "pivot")
+            expected_rows.extend(rows)
+    actual_rows = [[cell.text for cell in row.cells] for slide in readback.slides
+                   for shape in slide.shapes if shape.has_table for row in list(shape.table.rows)[1:]]
+    if actual_rows != expected_rows:
+        raise ExportError("Presentation table display verification failed.", "render_content_mismatch")
+    expected_charts = [_chart_data(snapshot, node) for node in nodes if node["kind"] == "chart"]
+    actual_charts = [shape.chart for slide in readback.slides for shape in slide.shapes if shape.has_chart]
+    if len(actual_charts) != len(expected_charts):
+        raise ExportError("Presentation chart coverage verification failed.", "render_content_mismatch")
+    for actual, (categories, series_values) in zip(actual_charts, expected_charts):
+        if ([str(category.label) for category in actual.plots[0].categories] != categories
+                or len(actual.series) != len(series_values)
+                or any(list(series.values) != expected for series, (_, expected) in zip(actual.series, series_values))):
+            raise ExportError("Presentation chart values verification failed.", "render_content_mismatch")
     return mapping, [{"check": "native_chart_and_text_roundtrip", "status": "pass"},
+                     {"check": "table_display_roundtrip", "status": "pass"},
                      {"check": "shape_bounds", "status": "pass"},
                      {"check": "target_application_text_layout", "status": "not_certified"}], "python-pptx", {"slide_count": len(prs.slides)}
 

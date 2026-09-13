@@ -4,6 +4,8 @@ A working local reporting application built from `Periodic_Report_System_Archite
 
 The registered regional revenue adapter can compare historical report/source pairs to distinguish three implemented selection policies. The included data and historical targets are synthetic. Optional model assistance through OpenAI or a local CLIProxyAPI instance proposes a policy or drafts fact-bound commentary; users review consequential decisions and every composed draft. This is bounded policy learning, not arbitrary reporting-program synthesis.
 
+Registered Census and ONS profiles also reconstruct scoped monthly headlines from original public reports and published data. They preserve source vintages and units, generate later-month drafts, and export the same frozen facts. Full bulletins and arbitrary templates remain outside the supported scope; FMC quarter inspection exposes unresolved reconciliation blocks.
+
 ## Run locally
 
 Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), and Node.js 22+.
@@ -25,6 +27,7 @@ For frontend development, run `npm --prefix web run dev` alongside the API. Vite
 ## What works
 
 - Source upload and inspection for CSV, XLSX, DOCX, text-bearing PDF, PNG and JPEG. Original bytes are content-addressed and integrity-checked. Only an unambiguous, value-only CSV/XLSX transaction source can feed this revenue program.
+- Explicit Census/ONS source import and historical headline observation profiles, with independently checked monthly drafts. Source defects remain visible and block use; unknown report regions require scope review.
 - Explicit current/comparison intervals, timezone and data cutoff. Exact decimal arithmetic, deterministic driver selection, missing-period blocking, distinct missing/zero states, row-level source references and fact dependency checks.
 - A native report with fact-linked prose, a typed regional table, a chart, a pivot definition, an optional image and flow/grid/canvas presentations. Click facts to inspect their definitions and origins.
 - Candidate versions within the same report type, policy decisions, independent synthetic regression evaluation, compare-and-swap publication, frozen source-code packages, and a pinned release for each run. The active release remains selected while its replacement is reviewed.
@@ -43,11 +46,11 @@ For frontend development, run `npm --prefix web run dev` alongside the API. Vite
 | PDF | Native flow rendered by ReportLab, including the frozen image and its description | Word pagination equivalence and tagged-PDF accessibility are not certified |
 | PPTX | Native text/tables/chart and an optional dedicated image slide, with complete canvas coverage | PowerPoint text layout/editing still requires target-app certification |
 
-Compatible exports disclose permitted static representations and pending certification. Required unsupported features block. Exported chart/pivot data uses approved regional aggregates, not original transaction identifiers. Office exports are downstream derivatives: editing them does not mutate the application report.
+Compatible exports disclose permitted static representations and pending certification. Required unsupported features block. Exported chart/pivot data uses declared aggregate or series columns; unrelated source data is excluded. Office exports are downstream derivatives: editing them does not mutate the application report.
 
 The executable evaluation fixture combines prose, table, chart, pivot and a real image in all four exports. Image placement preserves aspect ratio without cropping, stretching or upscaling. Office files contain image objects with description/decorative metadata; the raster pixels are not editable diagram elements. PDF descriptions are visible and recorded in the manifest, but tagged-PDF accessibility is not certified.
 
-## Source contract
+## Revenue source contract
 
 CSV uses UTF-8, comma delimiter, and exactly these columns:
 
@@ -177,9 +180,21 @@ uv run python scripts/validate_evolution.py --offline
 uv run python scripts/validate_evolution.py --run-live
 ```
 
-Live mode uses exact `claude-opus-5` for three policy proposals and twelve commentaries, capped at 27 requests including repairs. It creates a separate workspace under ignored `output/evolution-validation/`, preserves failures, and leaves reports awaiting review. The 13 September run passed all twelve periods using 16 real requests; the final regression suite passes 485 tests. This validates automatic later-period drafts within the registered revenue policies after explicit policy review and period selection.
+Live mode uses exact `claude-opus-5` for three policy proposals and twelve commentaries, capped at 27 requests including repairs. It creates a separate workspace under ignored `output/evolution-validation/`, preserves failures, and leaves reports awaiting review. The earlier 13 September milestone passed all twelve periods using 16 real requests and 485 regression tests. This validates automatic later-period drafts within the registered revenue policies after explicit policy review and period selection.
 
-The separate [public report/data benchmark](docs/PUBLIC_CORPUS_VALIDATION.md) contains twelve real Census, ONS and FMC period pairs with 21 original-file hashes and located source observations. `uv run python scripts/validate_public_corpus.py --fetch` downloads missing official originals and records their actual admission boundaries. The current adapter supports **zero complete workflows** from these public corpora; the record identifies the required aggregate-data, vintage, unit and report-extraction capabilities. Source reconciliation is not counted as application-generation success.
+The [public report/data benchmark](docs/PUBLIC_CORPUS_VALIDATION.md) contains twelve real Census, ONS and FMC period pairs with 21 original-file hashes. The original generic-import baseline remains reproducible with `uv run python scripts/validate_public_corpus.py --fetch`. Explicit **Census and ONS headline profiles** now support original-source import, independently observed historical targets, candidate learning/evaluation, later-month drafts and all four exports. They reconstruct eight Census or seven ONS headline measures; full bulletin prose, appendices, uncertainty and publisher layout remain outside that scope. FMC quarter inspection retains unresolved totals, image-report and unit blocks.
+
+Select the same public family when creating a program and importing its report/data files in Sources. CLI equivalents are `foundry create-type "Retail headlines" --family census_marts` and `foundry ingest source.xlsx --public-family census_marts`. Public periods must be exact calendar months with the immediately preceding month as comparison. Release checks have calendar-day precision; intraday availability is not certified. Scope decisions and report acceptance remain explicit.
+
+```sh
+uv run python scripts/validate_public_workflows.py --offline
+# Uses the configured local CLIProxyAPI and exact claude-opus-5; at most ten calls.
+uv run python scripts/validate_public_workflows.py --run-live
+# Read-only quarter inspection; does not certify an FMC report.
+foundry inspect-fmc output/public-corpus-cache/fmc-cfs-2025-source.xlsx --period 2025-Q1
+```
+
+The public workflow experiment uses the first two pairs per family for authoring and four later months for draft/evaluation jobs, with counterfactual and invalid-input cases. All public answers were previously researched, and later ONS observer failures were repaired as development regressions. These are **exposed regression checks, not untouched holdouts or proof of arbitrary report automation**. See the validation record for actual receipts, results and limitations.
 
 ## Deliberately unfinished architecture work
 

@@ -19,6 +19,7 @@ import type {
   Bootstrap,
   ExportRecord,
   Job,
+  Period,
   ReportNode,
   Snapshot,
 } from "./types";
@@ -29,6 +30,8 @@ import {
   getNodes,
 } from "./types";
 import { ImagePreview } from "./ImagePreview";
+import { eligibleSources, monthlySourcePeriod, publicFamily, reportFamilies } from "./publicReports";
+import type { ReportFamily } from "./publicReports";
 import { identifier, messageOf, post } from "./api";
 import { Badge, CheckLine, ErrorNotice, Modal, pretty, Spinner } from "./ui";
 
@@ -102,6 +105,7 @@ export function CreateTypeDialog({
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [family, setFamily] = useState<ReportFamily>("quarterly-revenue-v1");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function submit(e: React.FormEvent) {
@@ -112,6 +116,7 @@ export function CreateTypeDialog({
       const result = await post<{ program: { id: string } }>("/report-types", {
         name: name.trim(),
         description: description.trim(),
+        family,
       });
       await onCreated(result.program.id);
       onClose();
@@ -144,6 +149,12 @@ export function CreateTypeDialog({
             />
           </label>
           <label className="field">
+            Reporting family
+            <select value={family} onChange={(event) => setFamily(event.target.value as ReportFamily)}>
+              {reportFamilies.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}
+            </select>
+          </label>
+          <label className="field">
             Description <span className="optional">Optional</span>
             <textarea
               value={description}
@@ -156,9 +167,8 @@ export function CreateTypeDialog({
           <div className="notice info">
             <Info size={17} />
             <p>
-              This workspace supports a regional revenue program. Creating a
-              report type starts a candidate using that adapter. Pair historical
-              examples in Programs to compare the supported reporting policies.
+              {reportFamilies.find((item) => item.value === family)?.description}
+              {" "}Pair historical reports with their matching source files in Programs to review the scope before publication.
             </p>
           </div>
           {error && <ErrorNotice message={error} />}
@@ -202,12 +212,6 @@ export function RunDialog({
   const published = data.report_types.filter((type) =>
     canRunProgram(activeProgramFor(type, data.programs)),
   );
-  const usable = data.assets.filter(
-    (a) =>
-      Array.isArray(a.profile?.eligible_roles) &&
-      a.profile.eligible_roles.includes("transactions") &&
-      a.status !== "blocked",
-  );
   const images = data.assets.filter(
     (asset) =>
       Array.isArray(asset.profile?.eligible_roles) &&
@@ -238,18 +242,19 @@ export function RunDialog({
     timezone: "Europe/Paris",
     as_of: "2026-04-01T00:00:00+02:00",
   };
-  const period = snapshot?.period ?? fallback;
   const preferredType = reportTypeId ?? snapshot?.report_type_id;
   const [type, setType] = useState(
     published.find((type) => type.id === preferredType)?.id ??
       published[0]?.id ??
       "",
   );
+  const program = activeProgramFor(data.report_types.find((item) => item.id === type), data.programs);
+  const family = publicFamily(program);
+  const usable = eligibleSources(data.assets, program);
+  const initialSource = usable.find((asset) => snapshot?.source_assets.some((source) => source.id === asset.id)) ?? usable[0];
+  const period = monthlySourcePeriod(initialSource, family) ?? snapshot?.period ?? fallback;
   const [source, setSource] = useState(
-    usable.find((a) => snapshot?.source_assets.some((s) => s.id === a.id))
-      ?.id ??
-      usable[0]?.id ??
-      "",
+    initialSource?.id ?? "",
   );
   const [label, setLabel] = useState(period.label);
   const [start, setStart] = useState(period.start);
@@ -264,15 +269,47 @@ export function RunDialog({
   const [asOf, setAsOf] = useState(period.as_of);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  function applyPeriod(next: Period) {
+    setLabel(next.label);
+    setStart(next.start);
+    setEnd(next.end_exclusive);
+    setComparisonStart(next.comparison.start);
+    setComparisonEnd(next.comparison.end_exclusive);
+    setTimezone(next.timezone);
+    setAsOf(next.as_of);
+  }
+  function chooseSource(id: string) {
+    setSource(id);
+    const next = monthlySourcePeriod(usable.find((asset) => asset.id === id), family);
+    if (next) applyPeriod(next);
+  }
+  function chooseType(id: string) {
+    setType(id);
+    const nextProgram = activeProgramFor(data.report_types.find((item) => item.id === id), data.programs);
+    const nextFamily = publicFamily(nextProgram);
+    const nextSources = eligibleSources(data.assets, nextProgram);
+    const nextSource = nextSources.find((asset) => asset.id === source) ?? nextSources[0];
+    setSource(nextSource?.id ?? "");
+    applyPeriod(monthlySourcePeriod(nextSource, nextFamily) ?? snapshot?.period ?? fallback);
+    if (nextFamily) setImageId("");
+  }
   const active =
     busy || Boolean(job && ["queued", "running"].includes(job.status));
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!usable.some((asset) => asset.id === source)) {
+      setError("Choose a source inspected for this reporting family.");
+      return;
+    }
+    if (family && !monthlySourcePeriod(usable.find((asset) => asset.id === source), family)) {
+      setError("The public source needs a valid reference month and publication date. Reimport its original release file in Sources.");
+      return;
+    }
     if (end <= start || comparisonEnd <= comparisonStart) {
       setError("Each end date must fall after its start date.");
       return;
     }
-    if (imageId && !imageDecorative && !imageAlt.trim()) {
+    if (!family && imageId && !imageDecorative && !imageAlt.trim()) {
       setError(
         "Describe the report image, or mark it as decorative if it conveys no information.",
       );
@@ -293,7 +330,7 @@ export function RunDialog({
           as_of: asOf,
         },
         idempotency_key: identifier(),
-        ...(imageId
+        ...(!family && imageId
           ? {
               image: {
                 asset_id: imageId,
@@ -326,7 +363,7 @@ export function RunDialog({
             Reporting program
             <select
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) => chooseType(e.target.value)}
               required
             >
               <option value="" disabled>
@@ -347,10 +384,10 @@ export function RunDialog({
             </div>
           )}
           <label className="field">
-            Transaction source
+            {family ? "Published source data" : "Transaction source"}
             <select
               value={source}
-              onChange={(e) => setSource(e.target.value)}
+              onChange={(e) => chooseSource(e.target.value)}
               required
             >
               <option value="" disabled>
@@ -366,11 +403,16 @@ export function RunDialog({
           </label>
           {!usable.length && (
             <div className="notice warning">
-              Upload a compatible CSV or XLSX transaction source in Sources
-              first.
+              {family ? "Import a matching public release file in Sources first, using this reporting family." : "Upload a compatible CSV or XLSX transaction source in Sources first."}
             </div>
           )}
-          <fieldset className="report-image-fieldset">
+          {family && (
+            <p className="muted-small">
+              This profile reconstructs registered headlines. Release checks use
+              calendar dates; intraday availability is unverified.
+            </p>
+          )}
+          {!family && <fieldset className="report-image-fieldset">
             <legend>
               <ImageIcon size={16} />
               Report image <span>Optional</span>
@@ -469,7 +511,8 @@ export function RunDialog({
                 </details>
               </>
             )}
-          </fieldset>
+          </fieldset>}
+          {family && <p className="field-help">Dates follow the source’s reference month and publication vintage. Each headline keeps its own published comparison.</p>}
           <label className="field">
             Period label
             <input
@@ -486,6 +529,7 @@ export function RunDialog({
                 <input
                   type="date"
                   value={start}
+                  readOnly={Boolean(family)}
                   onChange={(e) => setStart(e.target.value)}
                   required
                 />
@@ -495,6 +539,7 @@ export function RunDialog({
                 <input
                   type="date"
                   value={end}
+                  readOnly={Boolean(family)}
                   onChange={(e) => setEnd(e.target.value)}
                   required
                 />
@@ -509,6 +554,7 @@ export function RunDialog({
                 <input
                   type="date"
                   value={comparisonStart}
+                  readOnly={Boolean(family)}
                   onChange={(e) => setComparisonStart(e.target.value)}
                   required
                 />
@@ -518,6 +564,7 @@ export function RunDialog({
                 <input
                   type="date"
                   value={comparisonEnd}
+                  readOnly={Boolean(family)}
                   onChange={(e) => setComparisonEnd(e.target.value)}
                   required
                 />

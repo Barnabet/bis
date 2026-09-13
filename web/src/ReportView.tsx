@@ -75,6 +75,7 @@ function displayValue(
   key?: string,
 ) {
   if (unit === "EUR") return money(value);
+  if (unit === "percent_points") return value == null ? "—" : `${value}%`;
   if (unit === "ratio" || key === "growth") return number(value, true);
   return value ?? "—";
 }
@@ -127,9 +128,9 @@ export function DataTable({
       [...dataset.rows].sort((a, b) => {
         const column = dataset.columns.find((c) => c.id === sort.column);
         const numeric =
-          column?.type === "decimal" || column?.type === "integer";
-        const av = a[sort.column];
-        const bv = b[sort.column];
+          column?.type === "decimal" || column?.type === "integer" || column?.type === "fact";
+        const av = column?.type === "fact" ? snapshot.facts[String(a[sort.column])]?.value : a[sort.column];
+        const bv = column?.type === "fact" ? snapshot.facts[String(b[sort.column])]?.value : b[sort.column];
         if (av == null || bv == null)
           return av == null ? (bv == null ? 0 : 1) : -1;
         const comparison = numeric
@@ -137,7 +138,7 @@ export function DataTable({
           : String(av).localeCompare(String(bv));
         return comparison * (sort.descending ? -1 : 1);
       }),
-    [dataset, sort],
+    [dataset, snapshot.facts, sort],
   );
   return (
     <div className="table-scroll">
@@ -186,10 +187,12 @@ export function DataTable({
           {rows.map((row, i) => (
             <tr key={`${row.region ?? ""}-${i}`}>
               {columns.map((col) => {
-                const fact = regionalFact(snapshot, row.region, col.id);
+                const fact = col.type === "fact"
+                  ? snapshot.facts[String(row[col.id])]
+                  : regionalFact(snapshot, row.region, col.id);
                 const value = fact
                   ? fact.display
-                  : displayValue(row[col.id], col.unit, col.id);
+                  : col.type === "fact" ? "Unavailable fact" : displayValue(row[col.id], col.unit, col.id);
                 return (
                   <td
                     key={col.id}
@@ -312,26 +315,54 @@ export function RevenueChart({
     </div>
   );
 }
+function headlineFact(snapshot: Snapshot, label: string) {
+  const row = snapshot.datasets.headlines?.rows.find((item) => item.metric === label);
+  return row && typeof row.value === "string" ? snapshot.facts[row.value] : undefined;
+}
+
+export function ReportChart(props: Shared & { dataset: Dataset; node: ReportNode }) {
+  const { snapshot, dataset, node, onFact, selectedFact } = props;
+  if (node.axis_unit !== "percent_points") return <RevenueChart {...props} />;
+  const category = node.category_column ?? dataset.columns[0]?.id;
+  const valueColumn = node.series?.[0]?.column_id;
+  if (!category || !valueColumn) return <p className="notice warning">Chart columns are unavailable.</p>;
+  const rows = dataset.rows.map((row) => ({ label: String(row[category] ?? ""), value: row[valueColumn] }));
+  const values = rows.map((row) => row.value == null ? NaN : Number(row.value));
+  if (values.some((value) => !Number.isFinite(value))) return <p className="notice warning">The chart has unavailable values. Review the headline table.</p>;
+  const minimum = Math.min(0, ...values), maximum = Math.max(0, ...values);
+  const range = maximum - minimum || 1;
+  const zero = (-minimum / range) * 100;
+  return <div className="headline-chart" role="figure" aria-label={`${node.title}. Published percentage figures; zero marks the baseline.`}>
+    <p className="headline-chart-unit">Published figures (%)</p>
+    {rows.map((row, index) => {
+      const value = values[index];
+      const fact = headlineFact(snapshot, row.label);
+      const display = fact?.display ?? displayValue(row.value, "percent_points");
+      return <div className="headline-chart-row" key={`${row.label}-${index}`}>
+        <span className="headline-chart-label">{row.label}</span>
+        <div className="headline-chart-track" aria-hidden="true">
+          <span className="headline-chart-zero" style={{ left: `${zero}%` }} />
+          <span className={`headline-chart-bar${value < 0 ? " negative" : ""}`} style={{ left: `${((Math.min(0, value) - minimum) / range) * 100}%`, width: `${(Math.abs(value) / range) * 100}%` }} />
+        </div>
+        {fact ? <button className={`table-fact headline-chart-value${selectedFact === fact.id ? " selected" : ""}`} onClick={() => onFact(fact.id)} title={`Inspect ${fact.definition}`}>{display}</button> : <span className="headline-chart-value">{display}</span>}
+      </div>;
+    })}
+    <p className="headline-chart-note">Negative values extend left of zero. Share and change measures retain their own definitions.</p>
+  </div>;
+}
+
 function Metrics(props: Shared) {
+  const headlineRows = props.snapshot.datasets.headlines?.rows;
+  const metrics = headlineRows
+    ? headlineRows.slice(0, 3).map((row) => ({ id: String(row.value), label: String(row.metric).toUpperCase(), caption: `Release ${String(props.snapshot.metadata.source_vintage ?? "")}` }))
+    : [
+      { id: "revenue.current", label: "TOTAL REVENUE", caption: "Current period" },
+      { id: "revenue.comparison", label: "COMPARISON", caption: "Previous comparison period" },
+      { id: "revenue.growth", label: "PERIOD GROWTH", caption: "Relative revenue change" },
+    ];
   return (
     <div className="report-metrics">
-      {[
-        {
-          id: "revenue.current",
-          label: "TOTAL REVENUE",
-          caption: "Current period",
-        },
-        {
-          id: "revenue.comparison",
-          label: "COMPARISON",
-          caption: "Previous comparison period",
-        },
-        {
-          id: "revenue.growth",
-          label: "PERIOD GROWTH",
-          caption: "Relative revenue change",
-        },
-      ].map(({ id, label, caption }) => (
+      {metrics.map(({ id, label, caption }) => (
         <button
           key={id}
           className={`metric${id.endsWith("growth") ? " growth" : ""}${props.selectedFact === id ? " selected" : ""}`}
@@ -366,7 +397,7 @@ export function ReportDocument(
   return (
     <article className="report-paper">
       <div className="paper-topline">
-        <span className="eyebrow">FINANCIAL PERFORMANCE</span>
+        <span className="eyebrow">{snapshot.datasets.headlines ? "PUBLISHED HEADLINES" : "FINANCIAL PERFORMANCE"}</span>
         <span className="paper-number">
           REPORT / {String(snapshot.revision).padStart(2, "0")}
         </span>
@@ -384,7 +415,7 @@ export function ReportDocument(
             ).toISOString(),
           )}
         </span>
-        <span>All figures in EUR</span>
+        <span>{snapshot.datasets.headlines ? `Publication vintage ${String(snapshot.metadata.source_vintage ?? "unavailable")}; units shown per measure` : "All figures in EUR"}</span>
       </div>
       <Metrics {...props} />
       {ordered.map((node) => {
@@ -436,10 +467,11 @@ export function ReportDocument(
             <section className="report-section chart-section" key={node.id}>
               <div className="section-title-row">
                 <h3>{node.title}</h3>
-                <span className="subtle-label">BY REGION</span>
+                <span className="subtle-label">{node.axis_unit === "percent_points" ? "BY MEASURE" : "BY REGION"}</span>
               </div>
-              <RevenueChart
+              <ReportChart
                 {...props}
+                node={node}
                 dataset={snapshot.datasets[node.dataset_id]}
               />
             </section>
@@ -590,7 +622,7 @@ function PreparedViewNode(
     return (
       <section className={family === "grid" ? "sheet-chart" : "slide-chart"}>
         <h3 className="view-node-heading">{node.title}</h3>
-        <RevenueChart {...props} dataset={dataset} />
+        <ReportChart {...props} dataset={dataset} node={node} />
       </section>
     );
   if ((node.kind === "table" || node.kind === "pivot") && dataset)

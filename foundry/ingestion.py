@@ -27,10 +27,14 @@ def _cell_observation(value):
     return value
 
 
-def inspect_zip(data, expected_format=None):
+def inspect_zip(data, expected_format=None, *, mode='strict'):
+    if mode not in {'strict', 'static_xlsx'} or (mode == 'static_xlsx' and expected_format != 'xlsx'):
+        raise DomainError('INSPECTION_MODE_INVALID', 'Choose a registered Office inspection mode.')
     try:
         z = ZipFile(BytesIO(data))
         entries = z.infolist()
+        if len({i.filename for i in entries}) != len(entries):
+            raise DomainError('ARCHIVE_INVALID', 'Duplicate archive members are not supported.')
         if len(entries) > 2500 or sum(i.file_size for i in entries) > MAX_EXPANDED:
             raise DomainError('ARCHIVE_LIMIT', 'The Office archive exceeds the inspection limit.')
         for i in entries:
@@ -40,12 +44,18 @@ def inspect_zip(data, expected_format=None):
             if i.flag_bits & 1 or (i.external_attr >> 16) & 0o170000 == 0o120000:
                 raise DomainError('ARCHIVE_INVALID', 'Encrypted or symbolic-link archive members are not supported.')
             lower = i.filename.lower()
-            if any(k in lower for k in ('vbaproject', 'activex', '/embeddings/', 'externallinks/')):
+            if any(k in lower for k in ('vbaproject', 'activex', '/embeddings/')) or ('externallinks/' in lower and mode != 'static_xlsx'):
                 raise DomainError('ACTIVE_CONTENT', 'Macros, embedded executable objects and external workbook links are not supported.')
             if lower.endswith('.rels'):
                 root = ET.fromstring(z.read(i))
                 for rel in root:
                     if rel.attrib.get('TargetMode') == 'External':
+                        # This opt-in mode permits inert workbook link provenance only.
+                        # Consumers must read static cells with keep_links=False and
+                        # never resolve the recorded target or execute formulas.
+                        if (mode == 'static_xlsx' and lower.startswith('xl/externallinks/_rels/')
+                                and rel.attrib.get('Type') == 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/externalLinkPath'):
+                            continue
                         raise DomainError('EXTERNAL_RESOURCE', 'The document contains external relationships. Supply a self-contained copy.')
         required = {'[Content_Types].xml', '_rels/.rels'}
         if expected_format == 'xlsx':
@@ -141,7 +151,7 @@ def xlsx_structure(data):
     return sheets, candidates
 
 
-def inspect_asset(data: bytes, filename: str, *, render_sink=None):
+def inspect_asset(data: bytes, filename: str, *, render_sink=None, pdf_page_limit=100):
     if len(data) > MAX_BYTES or not data:
         raise DomainError('UPLOAD_LIMIT', 'Supply a nonempty file no larger than 20 MB.')
     filename = unicodedata.normalize('NFC', Path(filename.replace('\\', '/')).name)[:200]
@@ -228,10 +238,12 @@ def inspect_asset(data: bytes, filename: str, *, render_sink=None):
             pdf = PdfReader(BytesIO(data), strict=False)
             if pdf.is_encrypted:
                 raise DomainError('PDF_ENCRYPTED', 'Encrypted PDF inputs are not supported.')
-            if len(pdf.pages) > 100:
-                raise DomainError('INPUT_LIMIT', 'The local inspector supports PDF inputs up to 100 pages.')
+            if len(pdf.pages) > pdf_page_limit:
+                raise DomainError('INPUT_LIMIT', f'The local inspector supports PDF inputs up to {pdf_page_limit} pages.')
             for i, page in enumerate(pdf.pages):
                 content = page.extract_text() or ''
+                if sum(len(r['text']) for r in profile['regions']) + len(content) > 1_000_000:
+                    raise DomainError('DOCUMENT_LIMIT', 'PDF extraction exceeds the structural text limit.')
                 profile['regions'].append({'id': f'page{i+1}', 'kind': 'page', 'text': content,
                                            'locator': f'page={i+1}', 'status': 'uninvestigated'})
             profile.update(page_count=len(pdf.pages), parser='pypdf/text-v1', eligible_roles=['historical_target', 'commentary'])

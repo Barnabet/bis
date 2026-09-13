@@ -6,7 +6,7 @@ import re
 from typing import Literal
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, UploadFile, File, Request
+from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -27,6 +27,7 @@ class Input(BaseModel):
 class CreateType(Input):
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default='', max_length=1000)
+    family: Literal['quarterly-revenue-v1', 'census_marts', 'ons_retail'] = 'quarterly-revenue-v1'
 
 class Evaluate(Input):
     expected_digest: str = Field(pattern=r'^[a-f0-9]{64}$')
@@ -141,13 +142,13 @@ def create_app(data_dir=None, start_worker=True):
 
     @app.post('/api/report-types', status_code=201)
     def create_type(body: CreateType):
-        return service.create_type(body.name, body.description)
+        return service.create_type(body.name, body.description, family=body.family)
 
     @app.post('/api/assets', status_code=201)
-    async def upload(file: UploadFile = File(...)):
+    async def upload(file: UploadFile = File(...), public_family: Literal['census_marts', 'ons_retail'] | None = Form(None)):
         from .ingestion import MAX_BYTES
         data = await file.read(MAX_BYTES + 1)
-        return service.upload(data, file.filename or 'upload')
+        return service.upload(data, file.filename or 'upload', public_family=public_family)
 
     @app.get('/api/assets/{id}')
     def asset(id: str):

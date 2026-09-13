@@ -57,7 +57,7 @@ def main():
     commands.add_parser('worker', help='Process persisted queued jobs until idle')
     commands.add_parser('status', help='List sources, programs, reports and jobs')
     commands.add_parser('model-status', help='Show provider readiness and budgets without exposing credentials')
-    example = commands.add_parser('add-example', help='Pair a historical DOCX/PDF report with a transaction source')
+    example = commands.add_parser('add-example', help='Pair a historical report with an inspected source for its registered family')
     example.add_argument('report_type_id'); example.add_argument('report_asset_id'); example.add_argument('source_asset_id')
     example.add_argument('--period', type=Path, required=True)
     example.add_argument('--role', choices=['authoring', 'development', 'reserved'], required=True)
@@ -66,7 +66,7 @@ def main():
     examples.add_argument('report_type_id')
     reveal = commands.add_parser('reveal-example', help='Permanently promote a reserved pair to development evidence')
     reveal.add_argument('example_id'); reveal.add_argument('--reason', required=True, type=candidate_reason)
-    learn = commands.add_parser('learn', help='Investigate three executable selection policies against paired examples')
+    learn = commands.add_parser('learn', help='Investigate registered reporting mappings against paired examples')
     learn.add_argument('program_id'); learn.add_argument('--key', required=True)
     learn.add_argument('--requirements', default=''); learn.add_argument('--engine', choices=['deterministic', 'openai'], default='deterministic')
     coverage = commands.add_parser('exclude-region', help='Record an explicit, reasoned exclusion from historical reconstruction')
@@ -77,8 +77,13 @@ def main():
     compose.add_argument('--objective', required=True); compose.add_argument('--key', required=True)
     ingest = commands.add_parser('ingest', help='Inspect and store an immutable input')
     ingest.add_argument('file', type=Path)
-    create = commands.add_parser('create-type', help='Create a report type using the trusted revenue adapter')
+    ingest.add_argument('--public-family', choices=['census_marts', 'ons_retail'])
+    fmc = commands.add_parser('inspect-fmc', help='Inspect a selected freight quarter and disclose unresolved reconciliation; no report certification')
+    fmc.add_argument('file', type=Path)
+    fmc.add_argument('--period', required=True)
+    create = commands.add_parser('create-type', help='Create a report type using a registered adapter')
     create.add_argument('name')
+    create.add_argument('--family', choices=['quarterly-revenue-v1', 'census_marts', 'ons_retail'], default='quarterly-revenue-v1')
     for operation, help_text in (
         ('create-candidate', 'Start the next program version within an existing report type'),
         ('discard-candidate', 'Discard an unpublished candidate while preserving the active release'),
@@ -102,6 +107,10 @@ def main():
     export.add_argument('--strict', action='store_true'); export.add_argument('--key', required=True)
     export.add_argument('--output', type=Path)
     args = parser.parse_args()
+    if args.command == 'inspect-fmc':
+        from .public_fmc import inspect_source
+        emit(inspect_source(args.file.read_bytes(), args.period))
+        return
     if args.command == 'serve':
         import uvicorn
         from .api import create_app
@@ -129,9 +138,9 @@ def main():
             p = service.store.get('program', args.program_id)
             result = service.review_coverage(p['id'], p['digest'], args.coverage_id, 'out_of_scope', args.reason)
         elif args.command == 'ingest':
-            result = service.upload(args.file.read_bytes(), args.file.name)
+            result = service.upload(args.file.read_bytes(), args.file.name, public_family=args.public_family)
         elif args.command == 'create-type':
-            result = service.create_type(args.name)
+            result = service.create_type(args.name, family=args.family)
         elif args.command in ('create-candidate', 'discard-candidate'):
             p = service.store.get('program', args.program_id)
             operation = service.create_candidate if args.command == 'create-candidate' else service.discard_candidate

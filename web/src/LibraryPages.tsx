@@ -18,6 +18,8 @@ import {
 import type { Asset, Bootstrap, SnapshotSummary } from "./types";
 import { activeProgramFor, canRunProgram, getImageProfile } from "./types";
 import { ImagePreview } from "./ImagePreview";
+import { reportFamilies, sourceUploadBody } from "./publicReports";
+import type { PublicFamily } from "./publicReports";
 import { api, messageOf } from "./api";
 import {
   Badge,
@@ -287,13 +289,13 @@ export function SourcesPage({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [family, setFamily] = useState<PublicFamily | "">("");
   async function upload(file?: File) {
     if (!file || uploading) return;
     setUploading(true);
     setError(null);
     try {
-      const body = new FormData();
-      body.append("file", file);
+      const body = sourceUploadBody(file, family);
       const asset = await api<Asset>("/assets", { method: "POST", body });
       await onRefresh();
       onOpen(asset.id);
@@ -321,11 +323,21 @@ export function SourcesPage({
           Upload source
         </button>
       </div>
+      <label className="field source-import-family">
+        Import as
+        <select value={family} onChange={(event) => setFamily(event.target.value as PublicFamily | "")} disabled={uploading}>
+          <option value="">General source or regional revenue</option>
+          {reportFamilies.filter((item) => item.value !== "quarterly-revenue-v1").map((item) => (
+            <option value={item.value} key={item.value}>{item.label}</option>
+          ))}
+        </select>
+        <span className="field-help">{family === "ons_retail" ? "Import the original ONS CSV or its historical PDF bulletin. Use the matching release vintage." : family === "census_marts" ? "Import the original Census XLSX release or its historical PDF bulletin. Use the matching release vintage." : "Inspect transaction data, reference documents and images."}</span>
+      </label>
       <input
         ref={input}
         className="sr-only"
         type="file"
-        accept=".csv,.xlsx,.docx,.pdf,.png,.jpg,.jpeg"
+        accept={family === "ons_retail" ? ".csv,.pdf" : family === "census_marts" ? ".xlsx,.pdf" : ".csv,.xlsx,.docx,.pdf,.png,.jpg,.jpeg"}
         aria-label="Upload source file"
         onChange={(e) => void upload(e.target.files?.[0])}
       />
@@ -353,8 +365,7 @@ export function SourcesPage({
             </span>
             <strong>Drop a source here, or browse files</strong>
             <span>
-              CSV, XLSX, DOCX, PDF, PNG or JPEG · Source inspection runs
-              automatically
+              {family === "ons_retail" ? "ONS CSV or PDF" : family === "census_marts" ? "Census XLSX or PDF" : "CSV, XLSX, DOCX, PDF, PNG or JPEG"} · Source inspection runs automatically
             </span>
           </>
         )}
@@ -400,6 +411,8 @@ export function SourcesPage({
                         ? "Image source"
                         : "Document source"}
                   {asset.demo === true && <em>Synthetic demo</em>}
+                  {asset.profile?.public_family === "ons_retail" && <em>ONS retail headlines</em>}
+                  {asset.profile?.public_family === "census_marts" && <em>Census retail headlines</em>}
                   {asset.reserved && <em>Reserved target · content hidden</em>}
                 </span>
               </span>
@@ -520,6 +533,8 @@ export function SourceDetail({
                 : String(profile.row_count ?? "Not tabular")}
           </KeyValue>
           <KeyValue label="Added">{shortDate(asset.created_at)}</KeyValue>
+          {!asset.reserved && typeof profile.period === "string" && <KeyValue label="Reference month">{profile.period}</KeyValue>}
+          {!asset.reserved && typeof profile.vintage === "string" && <KeyValue label="Publication vintage">{profile.vintage}</KeyValue>}
           <KeyValue label="Eligible roles">
             {asset.reserved
               ? "Withheld while reserved"

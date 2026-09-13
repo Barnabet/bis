@@ -14,6 +14,14 @@ from .storage import digest
 MAX_ATTEMPTS = 2
 MAX_WORDS = 150
 REQUIRED_FACTS = {'revenue.current', 'driver.region'}
+
+
+def required_facts(model):
+    family = model.metadata.get('adapter')
+    if family:
+        from .public_reports import config
+        return set(config(family)['required'])
+    return REQUIRED_FACTS
 TOKEN = re.compile(r'\{\{([A-Za-z0-9][A-Za-z0-9_.:-]{0,159})\}\}')
 CAUSAL = re.compile(r'\b(caus\w*|because|due\s+to|driven\s+by|drove|led\s+to|results?\s+(?:in|from)|resulted\s+(?:in|from)|attribut\w*|thanks\s+to|owing\s+to|explains?|explained)\b', re.I)
 NUMBER_WORDS = re.compile(r'\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|trillion|percent|percentage|twice|doubled?|tripled?|halved?|half|quarter)\b', re.I)
@@ -166,8 +174,9 @@ def _validate(model, evidence, proposal):
             runs.append({'type': 'text', 'text': text[cursor:]})
     if words < 8 or words > MAX_WORDS:
         findings.append(_finding('COMPOSITION_WORD_LIMIT', 'Commentary must contain between eight and 150 words.'))
-    if not REQUIRED_FACTS <= used:
-        findings.append(_finding('REQUIRED_FACT_MISSING', 'Reference both revenue.current and driver.region.'))
+    required = required_facts(model)
+    if not required <= used:
+        findings.append(_finding('REQUIRED_FACT_MISSING', 'Reference required facts: ' + ', '.join(sorted(required)) + '.'))
     findings.append(_finding('COMPOSITION_REVIEW_REQUIRED', 'Review the wording, factual meaning and source support before acceptance. Deterministic validation does not prove semantic correctness.', severity='review', refs=sorted(refs)))
     # Stable finding IDs remain unique even if several paragraphs fail one check.
     findings = list({f['id']: f for f in findings}.values())
@@ -191,11 +200,14 @@ def compose(snapshot, evidence, objective, provider=None):
         provider = OpenAIProvider()
     facts = {key: {field: getattr(fact, field) for field in ('value', 'display', 'unit', 'status', 'definition', 'scope')}
              for key, fact in model.facts.items() if fact.status in {'known', 'undefined'}}
-    payload = {'objective': objective.strip(), 'facts': facts, 'required_fact_ids': sorted(REQUIRED_FACTS),
+    required = required_facts(model)
+    instructions = INSTRUCTIONS.replace('Include {{revenue.current}} and {{driver.region}}.',
+        'Include every supplied required_fact_ids entry using a fact placeholder.') if model.metadata.get('adapter') else INSTRUCTIONS
+    payload = {'objective': objective.strip(), 'facts': facts, 'required_fact_ids': sorted(required),
                'qualitative_evidence': list(scoped.values()), 'max_words': MAX_WORDS}
     attempts, last = [], None
     for attempt in range(1, MAX_ATTEMPTS + 1):
-        response = provider.generate(INSTRUCTIONS, copy.deepcopy(payload), copy.deepcopy(PROPOSAL_SCHEMA), 'report_commentary')
+        response = provider.generate(instructions, copy.deepcopy(payload), copy.deepcopy(PROPOSAL_SCHEMA), 'report_commentary')
         if not isinstance(response, dict) or not isinstance(response.get('output'), dict) or not isinstance(response.get('receipt'), dict):
             raise DomainError('MODEL_RESPONSE_INVALID', 'The provider returned an invalid composition result.', 502)
         last = _validate(model, scoped, response['output'])

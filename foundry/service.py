@@ -76,8 +76,12 @@ class Service(AuthoringMixin):
             raise DomainError('REASON_REQUIRED', 'Provide a reason between 1 and 1000 characters.')
         return reason.strip()
 
-    def upload(self, data, filename, demo=False):
-        inspected = inspect_asset(data, filename, render_sink=self.store.put_blob)
+    def upload(self, data, filename, demo=False, public_family=None):
+        if public_family:
+            from .public_reports import inspect_upload
+            inspected = inspect_upload(data, filename, public_family)
+        else:
+            inspected = inspect_asset(data, filename, render_sink=self.store.put_blob)
         sha = self.store.put_blob(data)
         record = {'id': uid('asset'), **inspected, 'digest': sha, 'created_at': now(), 'demo': demo}
         self.store.insert('asset', record)
@@ -86,6 +90,8 @@ class Service(AuthoringMixin):
 
     @staticmethod
     def _declare_image_support(program):
+        if program['policy']['adapter'] != 'quarterly-revenue-v1':
+            return
         program['input_contract']['optional_image'] = {
             'role': 'report_image', 'formats': ['png', 'jpg', 'jpeg'], 'max_count': 1,
             'max_bytes': 20 * 1024 * 1024, 'max_pixels': 16_000_000, 'max_edge_px': 8192,
@@ -131,7 +137,7 @@ class Service(AuthoringMixin):
         return binding, {**binding, 'source_digest': asset['digest'],
                          **{k: info[k] for k in ('render_digest', 'media_type', 'width_px', 'height_px')}}
 
-    def create_type(self, name, description='', demo=False):
+    def create_type(self, name, description='', demo=False, family='quarterly-revenue-v1'):
         type_id, program_id = uid('type'), uid('program')
         report_type = {'id': type_id, 'name': name, 'description': description, 'active_program_id': None,
                        'created_at': now(), 'demo': demo}
@@ -167,6 +173,9 @@ class Service(AuthoringMixin):
                            'Native Excel pivot interaction requires certification in the intended spreadsheet application.',
                            'Single-user local runtime; no production multi-tenant sandbox.']
         }
+        if family != 'quarterly-revenue-v1':
+            from .public_reports import configure_program
+            configure_program(program, family)
         self._declare_image_support(program)
         program['digest'] = program_digest(program)
         with self.store.transaction() as db:
@@ -293,6 +302,9 @@ class Service(AuthoringMixin):
                 self.store.update('program', id, p, db)
                 self.store.audit(id, 'candidate_code_refreshed', {'previous_digest': expected_digest, 'digest': p['digest']}, db)
             raise DomainError('CODE_CHANGED', 'Installed code changed. The candidate was refreshed; review its policy decisions and evaluate again.', 409)
+        from .public_reports import family_of, evaluate_program
+        if family_of(program):
+            return evaluate_program(self, program)
         from .runtime import prepare, default_period
         from .contracts import Snapshot
         basis = self._evaluation_basis(program)
@@ -418,8 +430,8 @@ class Service(AuthoringMixin):
             raise DomainError('PROGRAM_UNPUBLISHED', 'Evaluate and publish this report type before generating a period.', 409)
         program = self.store.get('release', report_type['active_program_id'])
         asset = self._guard_asset(self.store.get('asset', asset_id))
-        if 'transactions' not in asset['profile']['eligible_roles']:
-            raise DomainError('INPUT_DRIFT', 'Bind a supported transaction source.')
+        if program['input_contract']['role'] not in asset['profile']['eligible_roles']:
+            raise DomainError('INPUT_DRIFT', 'Bind a source inspected for this reporting program’s input role.')
         payload = {'report_type_id': report_type_id, 'program_id': program['id'], 'program_digest': program['digest'],
                    'asset_id': asset_id, 'source_digest': asset['digest'], 'period': period}
         original_request = {'report_type_id': report_type_id, 'asset_id': asset_id, 'period': period}
@@ -494,7 +506,10 @@ class Service(AuthoringMixin):
         asset = self._guard_asset(self.store.get('asset', payload['asset_id']))
         if asset['digest'] != payload['source_digest']:
             raise DomainError('SOURCE_INTEGRITY', 'The transaction source differs from the frozen request.', 409)
-        rows = transaction_rows(self.store.read_blob(asset['digest']), asset['profile'])
+        from .public_reports import family_of, source_data, prepare as prepare_public
+        family = family_of(program)
+        rows = (source_data(self.store.read_blob(asset['digest']), asset, family) if family else
+                transaction_rows(self.store.read_blob(asset['digest']), asset['profile']))
         image_asset, image_metadata = None, None
         if payload.get('image'):
             stage('Verifying frozen report image')
@@ -509,7 +524,8 @@ class Service(AuthoringMixin):
             image_metadata = {k: bound[k] for k in ('asset_id', 'alt_text', 'decorative', 'render_digest',
                                                    'media_type', 'width_px', 'height_px')}
         stage('Preparing facts and shared data')
-        snapshot = prepare(rows, payload['period'], source_ref(asset), program={k: program[k] for k in ('id', 'version', 'digest')},
+        runner = (lambda *a, **kw: prepare_public(*a, family=family, **kw)) if family else prepare
+        snapshot = runner(rows, payload['period'], source_ref(asset), program={k: program[k] for k in ('id', 'version', 'digest')},
                            report_type_id=payload['report_type_id'], image_asset=source_ref(image_asset) if image_asset else None,
                            image_metadata=image_metadata, reporting_policy={'selection': program['policy']['selection']})
         self._installed_code_identity()
